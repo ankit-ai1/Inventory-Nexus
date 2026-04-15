@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv c:/Users/babbu/OneDrive/Desktop/inventory-nexus/inventory-nexus/* c:/Users/babbu/OneDrive/Desktop/inventory-nexus/)",
+      "Bash(mv c:/Users/babbu/OneDrive/Desktop/inventory-nexus/inventory-nexus/.* c:/Users/babbu/OneDrive/Desktop/inventory-nexus/)",
+      "Bash(rmdir c:/Users/babbu/OneDrive/Desktop/inventory-nexus/inventory-nexus)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)"
+    ]
+  }
+}
