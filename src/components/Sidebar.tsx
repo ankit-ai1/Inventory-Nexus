@@ -37,14 +37,21 @@ export default function Sidebar() {
         { icon: 'inventory_2', label: 'Inventory', path: '/inventory' },
         { icon: 'receipt_long', label: 'Purchase Orders', path: '/purchase-orders', badge: isAdmin ? pendingPOs : 0 },
         { icon: 'swap_horiz', label: 'Transfers', path: '/transfers' },
+        { icon: 'grid_view', label: 'Bin Management', path: '/bins' },
         { icon: 'build', label: 'Maintenance', path: '/maintenance' },
-        ...(isAdmin ? [{ icon: 'local_shipping', label: 'Suppliers', path: '/suppliers', adminOnly: true }] : []),
+        { icon: 'verified_user', label: 'Quality & Compliance', path: '/quality' },
+        { icon: 'balance', label: 'Stock Audit', path: '/reconciliation' },
+        ...(isAdmin ? [
+          { icon: 'local_shipping', label: 'Suppliers', path: '/suppliers', adminOnly: true },
+          { icon: 'insights', label: 'Vendor Intelligence', path: '/vendor-intelligence', adminOnly: true },
+        ] : []),
       ],
     },
     {
       label: 'Analytics',
       items: [
         { icon: 'bar_chart', label: 'Reports', path: '/reports' },
+        { icon: 'warehouse', label: 'Warehouse Analytics', path: '/warehouse-analytics' },
         ...(isAdmin ? [{ icon: 'history', label: 'Audit Log', path: '/audit-log', adminOnly: true }] : []),
       ],
     },

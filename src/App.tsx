@@ -14,6 +14,11 @@ import AuditLogPage from './pages/AuditLogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import SuppliersPage from './pages/SuppliersPage';
 import MaintenancePage from './pages/MaintenancePage';
+import BinManagementPage from './pages/BinManagementPage';
+import WarehouseAnalyticsPage from './pages/WarehouseAnalyticsPage';
+import QualityCompliancePage from './pages/QualityCompliancePage';
+import ReconciliationPage from './pages/ReconciliationPage';
+import VendorIntelligencePage from './pages/VendorIntelligencePage';
 import ToastContainer from './components/ToastContainer';
 import type { ReactNode } from 'react';
 
@@ -48,6 +53,11 @@ function AppRoutes() {
       <Route path="/audit-log" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
       <Route path="/suppliers" element={<AdminRoute><SuppliersPage /></AdminRoute>} />
       <Route path="/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/bins" element={<ProtectedRoute><BinManagementPage /></ProtectedRoute>} />
+      <Route path="/warehouse-analytics" element={<ProtectedRoute><WarehouseAnalyticsPage /></ProtectedRoute>} />
+      <Route path="/quality" element={<ProtectedRoute><QualityCompliancePage /></ProtectedRoute>} />
+      <Route path="/reconciliation" element={<ProtectedRoute><ReconciliationPage /></ProtectedRoute>} />
+      <Route path="/vendor-intelligence" element={<AdminRoute><VendorIntelligencePage /></AdminRoute>} />
       <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
     </Routes>
   );

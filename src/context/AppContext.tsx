@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { User, Toast, Product, Store, AppNotification, AuditLog, PurchaseOrder, StockTransfer, Supplier, MaintenanceLog } from '../types';
+import type { User, Toast, Product, Store, AppNotification, AuditLog, PurchaseOrder, StockTransfer, Supplier, MaintenanceLog, Bin, StockBatch, RMA, AMCContract, AssetDocument, CycleCount, StockAdjustment, LeadTimeRecord } from '../types';
 import {
   DUMMY_USERS, DUMMY_STORES, DUMMY_PRODUCTS,
   DUMMY_NOTIFICATIONS, DUMMY_AUDIT_LOGS,
   DUMMY_PURCHASE_ORDERS, DUMMY_TRANSFERS,
   DUMMY_SUPPLIERS, DUMMY_MAINTENANCE_LOGS,
+  DUMMY_BINS, DUMMY_BATCHES,
+  DUMMY_RMAS, DUMMY_AMC_CONTRACTS, DUMMY_ASSET_DOCS,
+  DUMMY_CYCLE_COUNTS, DUMMY_STOCK_ADJUSTMENTS, DUMMY_LEAD_TIME_RECORDS,
 } from '../data/dummy';
 
 interface AppContextType {
@@ -46,6 +49,30 @@ interface AppContextType {
   // Maintenance
   maintenanceLogs: MaintenanceLog[];
   setMaintenanceLogs: React.Dispatch<React.SetStateAction<MaintenanceLog[]>>;
+  // Bins
+  bins: Bin[];
+  setBins: React.Dispatch<React.SetStateAction<Bin[]>>;
+  // Stock Batches
+  batches: StockBatch[];
+  setBatches: React.Dispatch<React.SetStateAction<StockBatch[]>>;
+  // RMA
+  rmas: RMA[];
+  setRmas: React.Dispatch<React.SetStateAction<RMA[]>>;
+  // AMC Contracts
+  amcContracts: AMCContract[];
+  setAmcContracts: React.Dispatch<React.SetStateAction<AMCContract[]>>;
+  // Asset Documents
+  assetDocs: AssetDocument[];
+  setAssetDocs: React.Dispatch<React.SetStateAction<AssetDocument[]>>;
+  // Cycle Counts
+  cycleCounts: CycleCount[];
+  setCycleCounts: React.Dispatch<React.SetStateAction<CycleCount[]>>;
+  // Stock Adjustments
+  stockAdjustments: StockAdjustment[];
+  setStockAdjustments: React.Dispatch<React.SetStateAction<StockAdjustment[]>>;
+  // Lead Time Records
+  leadTimeRecords: LeadTimeRecord[];
+  setLeadTimeRecords: React.Dispatch<React.SetStateAction<LeadTimeRecord[]>>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -63,6 +90,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [transfers, setTransfers] = useState<StockTransfer[]>(DUMMY_TRANSFERS);
   const [suppliers, setSuppliers] = useState<Supplier[]>(DUMMY_SUPPLIERS);
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>(DUMMY_MAINTENANCE_LOGS);
+  const [bins, setBins] = useState<Bin[]>(DUMMY_BINS);
+  const [batches, setBatches] = useState<StockBatch[]>(DUMMY_BATCHES);
+  const [rmas, setRmas] = useState<RMA[]>(DUMMY_RMAS);
+  const [amcContracts, setAmcContracts] = useState<AMCContract[]>(DUMMY_AMC_CONTRACTS);
+  const [assetDocs, setAssetDocs] = useState<AssetDocument[]>(DUMMY_ASSET_DOCS);
+  const [cycleCounts, setCycleCounts] = useState<CycleCount[]>(DUMMY_CYCLE_COUNTS);
+  const [stockAdjustments, setStockAdjustments] = useState<StockAdjustment[]>(DUMMY_STOCK_ADJUSTMENTS);
+  const [leadTimeRecords, setLeadTimeRecords] = useState<LeadTimeRecord[]>(DUMMY_LEAD_TIME_RECORDS);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -132,6 +167,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       transfers, setTransfers,
       suppliers, setSuppliers,
       maintenanceLogs, setMaintenanceLogs,
+      bins, setBins,
+      batches, setBatches,
+      rmas, setRmas,
+      amcContracts, setAmcContracts,
+      assetDocs, setAssetDocs,
+      cycleCounts, setCycleCounts,
+      stockAdjustments, setStockAdjustments,
+      leadTimeRecords, setLeadTimeRecords,
     }}>
       {children}
     </AppContext.Provider>

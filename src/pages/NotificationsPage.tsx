@@ -13,6 +13,8 @@ const TYPE_LABELS: Record<NotificationType, { label: string; icon: string; color
   purchase_order: { label: 'Purchase Order', icon: 'receipt_long', color: '#7c3aed' },
   transfer: { label: 'Transfer', icon: 'swap_horiz', color: '#00514a' },
   system: { label: 'System', icon: 'info', color: '#00478d' },
+  rma: { label: 'RMA', icon: 'assignment_return', color: '#9a3412' },
+  amc: { label: 'AMC', icon: 'engineering', color: '#065f46' },
 };
 
 export default function NotificationsPage() {

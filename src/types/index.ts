@@ -62,7 +62,9 @@ export type NotificationType =
   | 'warranty_expired'
   | 'system'
   | 'purchase_order'
-  | 'transfer';
+  | 'transfer'
+  | 'rma'
+  | 'amc';
 
 export interface AppNotification {
   id: string;
@@ -126,6 +128,7 @@ export interface PurchaseOrderItem {
   category: string;
   quantity: number;
   price: number;
+  receivedQty?: number;
 }
 
 export interface PurchaseOrder {
@@ -191,12 +194,15 @@ export interface MaintenanceLog {
 
 // ─── Stock Transfers ─────────────────────────────────────────────────────────
 
-export type TransferStatus = 'pending' | 'approved' | 'rejected' | 'completed';
+export type TransferStatus = 'pending' | 'approved' | 'in_transit' | 'rejected' | 'completed';
+
+export type TransferType = 'push' | 'pull';
 
 export interface StockTransfer {
   id: string;
   transferNumber: string;
   status: TransferStatus;
+  transferType: TransferType;   // push = sending from my store, pull = requesting from another store
   fromStoreId: string;
   fromStoreName: string;
   toStoreId: string;
@@ -207,9 +213,217 @@ export interface StockTransfer {
   quantity: number;
   requestedBy: string;
   requestedById: string;
+  requestedByStoreId?: string;  // store that originated the request
   approvedBy?: string;
   notes?: string;
   requestedAt: string;
   approvedAt?: string;
+  shippedAt?: string;
   completedAt?: string;
+  trackingId?: string;
+  receivedByName?: string;
+}
+
+// ─── Bin Management ──────────────────────────────────────────────────────────
+
+export type BinStatus = 'empty' | 'occupied' | 'reserved' | 'maintenance';
+
+export interface Bin {
+  id: string;
+  binCode: string;           // e.g. "A-01-R2" (Zone-Aisle-Rack)
+  zone: string;              // "A" | "B" | "C" | "D"
+  aisle: string;             // "01" | "02" etc.
+  rack: string;              // "R1" | "R2" etc.
+  storeId: string;
+  storeName: string;
+  preferredCategory?: string;
+  capacity: number;
+  currentQty: number;
+  status: BinStatus;
+  productId?: string;
+  productName?: string;
+  qrData: string;
+  createdAt: string;
+  lastActivityAt?: string;
+}
+
+// ─── Stock Batches (FEFO) ────────────────────────────────────────────────────
+
+export type BatchStatus = 'available' | 'reserved' | 'depleted';
+
+export interface StockBatch {
+  id: string;
+  batchNumber: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  binId: string;
+  binCode: string;
+  storeId: string;
+  storeName: string;
+  quantity: number;
+  expiryDate: string;     // used for FEFO sorting
+  receivedDate: string;
+  status: BatchStatus;
+  notes?: string;
+}
+
+// ─── RMA (Return Merchandise Authorization) ──────────────────────────────────
+
+export type RMAStatus = 'initiated' | 'received' | 'inspected' | 'sent_to_vendor' | 'resolved' | 'rejected';
+export type RMADefectType = 'hardware' | 'software' | 'physical_damage' | 'dead_on_arrival' | 'performance' | 'other';
+export type RMAResolution = 'repair' | 'replacement' | 'credit_note' | 'rejected';
+export type RMAPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface RMA {
+  id: string;
+  rmaNumber: string;
+  status: RMAStatus;
+  priority: RMAPriority;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  storeName: string;
+  quantity: number;
+  defectType: RMADefectType;
+  defectDescription: string;
+  reportedBy: string;
+  reportedById: string;
+  vendorName: string;
+  vendorContact?: string;
+  trackingNumber?: string;
+  resolution?: RMAResolution;
+  resolutionNotes?: string;
+  initiatedAt: string;
+  receivedAt?: string;
+  inspectedAt?: string;
+  sentToVendorAt?: string;
+  resolvedAt?: string;
+  notes?: string;
+}
+
+// ─── AMC & Service Tracking ───────────────────────────────────────────────────
+
+export type AMCCoverage = 'comprehensive' | 'non_comprehensive' | 'parts_only' | 'labour_only';
+export type ServiceFrequency = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
+
+export interface AMCContract {
+  id: string;
+  contractNumber: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  storeName: string;
+  vendorName: string;
+  vendorContact: string;
+  vendorEmail?: string;
+  startDate: string;
+  endDate: string;
+  coverageType: AMCCoverage;
+  serviceFrequency: ServiceFrequency;
+  lastServiceDate?: string;
+  nextServiceDate: string;
+  annualCost: number;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+// ─── Digital Asset Vault ──────────────────────────────────────────────────────
+
+export type AssetDocType = 'manual' | 'invoice' | 'insurance' | 'warranty_card' | 'amc_contract' | 'compliance_cert' | 'other';
+
+export interface AssetDocument {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  storeName: string;
+  docType: AssetDocType;
+  title: string;
+  fileName: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedById: string;
+  uploadedAt: string;
+  expiryDate?: string;
+  notes?: string;
+}
+
+// ─── Cycle Counting & Reconciliation ─────────────────────────────────────────
+
+export type CycleCountStatus = 'draft' | 'in_progress' | 'completed';
+
+export interface CycleCountItem {
+  productId: string;
+  productName: string;
+  sku: string;
+  category: string;
+  systemQty: number;
+  countedQty: number | null;   // null = not yet counted
+  variance: number;            // countedQty - systemQty (0 if not yet counted)
+}
+
+export interface CycleCount {
+  id: string;
+  ccNumber: string;
+  storeId: string;
+  storeName: string;
+  category: string;            // category being counted, 'All' for full count
+  status: CycleCountStatus;
+  items: CycleCountItem[];
+  createdBy: string;
+  createdById: string;
+  createdAt: string;
+  completedAt?: string;
+  notes?: string;
+}
+
+export type AdjustmentReason = 'damage' | 'theft' | 'counting_error' | 'expiry' | 'found' | 'other';
+export type AdjustmentStatus = 'pending' | 'approved' | 'rejected';
+
+export interface StockAdjustment {
+  id: string;
+  adjNumber: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  storeName: string;
+  reason: AdjustmentReason;
+  systemQty: number;
+  adjustedQty: number;
+  variance: number;            // adjustedQty - systemQty
+  status: AdjustmentStatus;
+  notes?: string;
+  requestedBy: string;
+  requestedById: string;
+  reviewedBy?: string;
+  requestedAt: string;
+  reviewedAt?: string;
+  cycleCountId?: string;       // linked cycle count if any
+}
+
+// ─── Lead Time & Vendor Intelligence ─────────────────────────────────────────
+
+export type LeadTimeStatus = 'ordered' | 'in_transit' | 'received' | 'overdue';
+
+export interface LeadTimeRecord {
+  id: string;
+  poId: string;
+  poNumber: string;
+  supplierId: string;
+  supplierName: string;
+  storeId: string;
+  storeName: string;
+  orderedAt: string;
+  expectedAt: string;
+  receivedAt?: string;
+  leadDays?: number;           // actual days from ordered to received
+  expectedLeadDays: number;    // promised/expected lead days
+  status: LeadTimeStatus;
+  notes?: string;
 }
