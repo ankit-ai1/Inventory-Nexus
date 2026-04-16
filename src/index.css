@@ -141,7 +141,7 @@ h1, h2, h3, h4, h5, .font-manrope {
   left: 0;
   top: 0;
   bottom: 0;
-  z-index: 100;
+  z-index: 200;
   transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 
@@ -1039,8 +1039,8 @@ h1, h2, h3, h4, h5, .font-manrope {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.35);
-  z-index: 99;
+  background: rgba(0,0,0,0.55);
+  z-index: 195;
 }
 
 /* Toast */
@@ -1162,7 +1162,7 @@ h1, h2, h3, h4, h5, .font-manrope {
 
 /* ─── Responsive: Mobile (≤768px) ─────────────────────────────────────────── */
 @media (max-width: 768px) {
-  :root { --sidebar-width: 260px; }
+  :root { --sidebar-width: min(85vw, 300px); }
 
   /* Sidebar slides off-screen */
   .sidebar {
@@ -1170,7 +1170,7 @@ h1, h2, h3, h4, h5, .font-manrope {
   }
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.25);
   }
   .sidebar-overlay.open {
     display: block;
