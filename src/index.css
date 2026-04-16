@@ -1,5 +1,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Smooth dark/light transitions on structural elements */
+.sidebar, .main-content, .topbar, .mobile-header,
+.card, .modal, .notif-dropdown, .search-dropdown,
+.data-table, .table-container, .metric-card {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
+}
+
 :root {
   --primary: #00478d;
   --primary-container: #005eb8;
@@ -40,7 +47,52 @@
   --amber: #f59e0b;
   --amber-container: #fef3c7;
   --on-amber: #78350f;
+  --border: #e2e4e8;
   --sidebar-width: 260px;
+}
+
+/* ─── Dark Theme ────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --primary: #4da3ff;
+  --primary-container: #1a6bc4;
+  --on-primary: #ffffff;
+  --on-primary-container: #cce4ff;
+  --primary-fixed: #1a3a6b;
+  --primary-fixed-dim: #2a5090;
+  --secondary: #9baec8;
+  --secondary-container: #1e3a5a;
+  --on-secondary: #0e1e30;
+  --on-secondary-container: #9baec8;
+  --tertiary: #4fd8ca;
+  --tertiary-fixed: #0a3330;
+  --tertiary-fixed-dim: #1a4a47;
+  --on-tertiary: #002e2a;
+  --on-tertiary-container: #4fd8ca;
+  --error: #ff6b6b;
+  --error-container: #5c1a1a;
+  --on-error: #ffffff;
+  --on-error-container: #ffb4b4;
+  --background: #0f1114;
+  --on-background: #e2e4e7;
+  --surface: #0f1114;
+  --surface-dim: #0a0c0f;
+  --surface-bright: #1a1d21;
+  --surface-container-lowest: #0a0c0f;
+  --surface-container-low: #141619;
+  --surface-container: #1a1d21;
+  --surface-container-high: #202428;
+  --surface-container-highest: #272b30;
+  --on-surface: #e2e4e7;
+  --on-surface-variant: #b0b8c8;
+  --outline: #6a7280;
+  --outline-variant: #2e3340;
+  --inverse-surface: #e2e4e7;
+  --inverse-on-surface: #1a1d21;
+  --inverse-primary: #00478d;
+  --amber: #fbbf24;
+  --amber-container: #3a2800;
+  --on-amber: #fde68a;
+  --border: #2e3340;
 }
 
 body {
@@ -49,6 +101,7 @@ body {
   color: var(--on-surface);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 h1, h2, h3, h4, h5, .font-manrope {
@@ -1090,89 +1143,252 @@ h1, h2, h3, h4, h5, .font-manrope {
 ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--outline); }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-  :root { --sidebar-width: 260px; }
-
-  .sidebar {
-    transform: translateX(-100%);
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
-  }
-
-  .sidebar-overlay.open {
-    display: block;
-  }
-
-  .main-content {
-    margin-left: 0;
-  }
-
-  .mobile-header {
-    display: flex;
-  }
-
-  .topbar {
-    display: none;
-  }
+/* ─── Responsive: Tablet (≤1024px) ────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  :root { --sidebar-width: 240px; }
 
   .page-content {
-    padding: 1rem;
+    padding: 1.5rem;
   }
 
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.875rem;
   }
 
+  .topbar {
+    padding: 0.75rem 1.5rem;
+  }
+}
+
+/* ─── Responsive: Mobile (≤768px) ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --sidebar-width: 260px; }
+
+  /* Sidebar slides off-screen */
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  }
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  /* Main content fills screen */
+  .main-content {
+    margin-left: 0;
+  }
+  .mobile-header {
+    display: flex;
+  }
+  .topbar {
+    display: none;
+  }
+
+  /* Page layout */
+  .page-content {
+    padding: 1rem;
+  }
+  .page-header {
+    margin-bottom: 1.25rem;
+  }
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  .page-header p {
+    max-width: 100%;
+  }
+
+  /* Make page-header action buttons wrap under title */
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Metric grids */
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .metric-card {
+    padding: 1rem;
+  }
+  .metric-card-value {
+    font-size: 1.75rem;
+  }
+
+  /* Cards */
+  .card {
+    border-radius: 0.625rem;
+  }
+
+  /* Activity section */
   .activity-section {
     grid-template-columns: 1fr;
   }
 
+  /* Login */
   .login-card {
     grid-template-columns: 1fr;
   }
-
   .login-brand {
     display: none;
   }
-
-  .form-row {
-    grid-template-columns: 1fr;
+  .login-form-side {
+    padding: 2rem 1.5rem;
   }
 
+  /* Forms */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  /* Table toolbar */
   .table-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.625rem;
   }
-
   .table-toolbar-search {
     max-width: 100%;
   }
-
-  .page-header h1 {
-    font-size: 1.5rem;
+  .table-toolbar-actions {
+    flex-wrap: wrap;
   }
 
+  /* Tables: allow horizontal scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table {
+    min-width: 600px;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.625rem 0.875rem;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
   .modal {
-    padding: 1.5rem;
+    padding: 1.25rem;
+    border-radius: 1.25rem 1.25rem 0 0;
+    max-width: 100%;
+    max-height: 92vh;
+    width: 100%;
+  }
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+  .modal-footer {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
   }
 
-  .data-table th, .data-table td {
-    padding: 0.75rem 0.875rem;
+  /* Notification dropdown */
+  .notif-dropdown {
+    width: calc(100vw - 2rem);
+    right: -1rem;
+    max-height: 80vh;
+  }
+
+  /* Tab bars — make them scroll horizontally */
+  .tab-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    white-space: nowrap;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
+  }
+
+  /* Inline tab bars used across feature pages */
+  [data-tab-bar] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+  }
+
+  /* Button groups — stack on very small screens */
+  .btn {
+    white-space: nowrap;
+  }
+  .btn-sm {
+    padding: 0.3rem 0.625rem;
+    font-size: 0.72rem;
+  }
+
+  /* Scroll-wrap any plain inline table */
+  .table-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
+/* ─── Responsive: Small phones (≤480px) ───────────────────────────────────── */
 @media (max-width: 480px) {
-  .metric-grid {
-    grid-template-columns: 1fr 1fr;
+  .page-content {
+    padding: 0.75rem;
+  }
+  .page-header h1 {
+    font-size: 1.3rem;
   }
 
+  /* Metric grid → single column on tiny phones */
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+  }
   .metric-card-value {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+  }
+  .metric-card-label {
+    font-size: 0.5625rem;
+  }
+
+  /* Modals take full height on very small phones */
+  .modal {
+    max-height: 96vh;
+    padding: 1rem;
+  }
+
+  /* Utility: hide on small phones */
+  .hide-mobile { display: none !important; }
+
+  /* Utility: stack flex rows vertically */
+  .flex-stack-xs {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .notif-dropdown {
+    width: calc(100vw - 1rem);
+    right: -0.5rem;
+  }
+
+  .data-table {
+    min-width: 480px;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.78rem;
   }
 }
 
@@ -1464,4 +1680,103 @@ h1, h2, h3, h4, h5, .font-manrope {
   .tab-nav {
     overflow-x: auto;
   }
+}
+
+/* ─── Responsive Grid Utilities ────────────────────────────────────────────── */
+
+/* Usage: className="rg rg-4" → 4-col on desktop, 2 on tablet, 1 on mobile */
+.rg { display: grid; gap: 1rem; }
+.rg-4 { grid-template-columns: repeat(4, 1fr); }
+.rg-3 { grid-template-columns: repeat(3, 1fr); }
+.rg-2 { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 1024px) {
+  .rg-4 { grid-template-columns: repeat(2, 1fr); }
+  .rg-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .rg-4, .rg-3, .rg-2 { grid-template-columns: 1fr; }
+}
+
+/* ─── Inline Tab Bar ───────────────────────────────────────────────────────── */
+/* Wraps any inline-style flex tab bar to scroll on mobile instead of wrapping */
+.tab-bar-scroll {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+  border-bottom: 2px solid var(--border, #e5e7eb);
+  margin-bottom: 1.5rem;
+  gap: 0;
+}
+.tab-bar-scroll::-webkit-scrollbar { display: none; }
+
+.tab-bar-scroll button {
+  flex-shrink: 0;
+}
+
+/* ─── Inline Table Scroll Wrap ─────────────────────────────────────────────── */
+.table-scroll-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0.75rem;
+}
+.table-scroll-wrap table {
+  min-width: 560px;
+}
+
+/* ─── Page Header Row (action button aligned right) ────────────────────────── */
+.page-header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .page-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+/* ─── Card Grid (auto-fit responsive) ─────────────────────────────────────── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 480px) {
+  .card-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Chip / filter row that wraps nicely ──────────────────────────────────── */
+.filter-row {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  align-items: center;
+}
+.filter-row .form-select,
+.filter-row .form-input {
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+/* ─── Metric summary strip (2-up on mobile) ────────────────────────────────── */
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 900px) {
+  .summary-strip { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 400px) {
+  .summary-strip { grid-template-columns: 1fr 1fr; gap: 0.625rem; }
 }

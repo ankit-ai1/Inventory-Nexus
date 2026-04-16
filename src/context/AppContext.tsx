@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { User, Toast, Product, Store, AppNotification, AuditLog, PurchaseOrder, StockTransfer, Supplier, MaintenanceLog, Bin, StockBatch, RMA, AMCContract, AssetDocument, CycleCount, StockAdjustment, LeadTimeRecord } from '../types';
 import {
   DUMMY_USERS, DUMMY_STORES, DUMMY_PRODUCTS,
@@ -27,6 +27,8 @@ interface AppContextType {
   // UI state
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
   // Notifications
   notifications: AppNotification[];
   setNotifications: React.Dispatch<React.SetStateAction<AppNotification[]>>;
@@ -84,6 +86,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(DUMMY_PRODUCTS);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    try { localStorage.setItem('darkMode', String(darkMode)); } catch { /* noop */ }
+  }, [darkMode]);
+
+  const toggleDarkMode = useCallback(() => setDarkMode(prev => !prev), []);
   const [notifications, setNotifications] = useState<AppNotification[]>(DUMMY_NOTIFICATIONS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(DUMMY_AUDIT_LOGS);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(DUMMY_PURCHASE_ORDERS);
@@ -159,6 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       products, setProducts,
       toasts, showToast,
       sidebarOpen, setSidebarOpen,
+      darkMode, toggleDarkMode,
       notifications, setNotifications,
       markNotificationRead, markAllNotificationsRead, addNotification,
       unreadCount,

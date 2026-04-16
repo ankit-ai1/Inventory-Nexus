@@ -402,7 +402,7 @@ export default function BinManagementPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '2px solid var(--outline-variant)', marginBottom: '1.5rem', overflowX: 'auto' }}>
+        <div className="tab-bar-scroll" style={{ borderBottomColor: 'var(--outline-variant)', marginBottom: '1.5rem' }}>
           {([
             { key: 'bins',    label: 'Bin List',       icon: 'view_list' },
             { key: 'zonemap', label: 'Zone Map',        icon: 'map' },

@@ -185,7 +185,7 @@ export default function VendorIntelligencePage() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--border)', marginBottom: 24 }}>
+      <div className="tab-bar-scroll">
         {tabs.map(t => (
           <button
             key={t.key}
@@ -193,7 +193,7 @@ export default function VendorIntelligencePage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px',
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: '0.875rem', fontWeight: 500,
+              fontSize: '0.875rem', fontWeight: 500, flexShrink: 0,
               color: tab === t.key ? 'var(--primary)' : 'var(--secondary)',
               borderBottom: tab === t.key ? '2px solid var(--primary)' : '2px solid transparent',
               marginBottom: -2,
@@ -376,8 +376,8 @@ export default function VendorIntelligencePage() {
               <p>No lead time records found</p>
             </div>
           ) : (
-            <div style={{ background: 'var(--surface)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <div className="table-scroll-wrap" style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: 'var(--border)', textAlign: 'left' }}>
                     {['PO Number', 'Supplier', 'Store', 'Ordered', 'Expected', 'Received', 'Lead Days', 'vs Target', 'Status'].map(h => (

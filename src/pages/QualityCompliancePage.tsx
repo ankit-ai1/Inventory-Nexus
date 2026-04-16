@@ -380,10 +380,10 @@ export default function QualityCompliancePage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--surface-container)' }}>
+        <div className="tab-bar-scroll" style={{ borderBottomColor: 'var(--surface-container)' }}>
           {([['rma', 'assignment_return', 'Return & Replacement'], ['amc', 'engineering', 'AMC & Service'], ['vault', 'folder_open', 'Documents']] as const).map(([tab, icon, label]) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
-              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0,
               padding: '0.625rem 1rem', background: 'none', border: 'none', cursor: 'pointer',
               borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
               marginBottom: -2, color: activeTab === tab ? 'var(--primary)' : 'var(--secondary)',
@@ -399,7 +399,7 @@ export default function QualityCompliancePage() {
         {activeTab === 'rma' && (
           <div>
             {/* Stats */}
-            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.5rem' }}>
+            <div className="summary-strip" style={{ marginBottom: '1.5rem' }}>
               <div className="metric-card">
                 <div className="metric-card-icon" style={{ background: '#ffedd5', marginBottom: '0.75rem' }}>
                   <span className="material-symbols-outlined" style={{ color: '#9a3412' }}>pending_actions</span>
@@ -593,7 +593,7 @@ export default function QualityCompliancePage() {
             )}
 
             {/* Stats */}
-            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '1.5rem' }}>
+            <div className="summary-strip" style={{ marginBottom: '1.5rem' }}>
               <div className="metric-card">
                 <div className="metric-card-icon" style={{ background: '#d1fae5', marginBottom: '0.75rem' }}>
                   <span className="material-symbols-outlined" style={{ color: '#065f46' }}>contract</span>
