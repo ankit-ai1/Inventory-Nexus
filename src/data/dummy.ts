@@ -1,10 +1,10 @@
-import type { User, Store, Product, AppNotification, AuditLog, PurchaseOrder, StockTransfer } from '../types';
+import type { User, Store, Product, AppNotification, AuditLog, PurchaseOrder, StockTransfer, Supplier, MaintenanceLog } from '../types';
 
 export const DUMMY_USERS: User[] = [
   { id: 'u1', name: 'Alex Sterling', email: 'alex.sterling@nexus.com', role: 'head_admin', status: 'active', createdAt: '2024-01-10' },
   { id: 'u2', name: 'Jordan Patel', email: 'jordan.patel@nexus.com', role: 'store_manager', storeId: 's1', storeName: 'Downtown Hub A1', status: 'active', createdAt: '2024-02-15' },
   { id: 'u3', name: 'Morgan Lee', email: 'morgan.lee@nexus.com', role: 'store_manager', storeId: 's2', storeName: 'Westside Depot B2', status: 'active', createdAt: '2024-03-05' },
-  { id: 'u4', name: 'Riley Chen', email: 'riley.chen@nexus.com', role: 'store_manager', storeId: 's3', storeName: 'North Gate C3', status: 'inactive', createdAt: '2024-03-22' },
+  { id: 'u4', name: 'Riley Chen', email: 'riley.chen@nexus.com', role: 'store_manager', storeId: 's3', storeName: 'North Gate C3', status: 'active', createdAt: '2024-03-22' },
   { id: 'u5', name: 'Avery Smith', email: 'avery.smith@nexus.com', role: 'store_manager', storeId: 's4', storeName: 'Eastview Warehouse D4', status: 'active', createdAt: '2024-04-11' },
   { id: 'u6', name: 'Sam Torres', email: 'sam.torres@nexus.com', role: 'store_manager', storeId: 's5', storeName: 'Harbor Point E5', status: 'active', createdAt: '2024-05-01' },
 ];
@@ -12,7 +12,7 @@ export const DUMMY_USERS: User[] = [
 export const DUMMY_STORES: Store[] = [
   { id: 's1', name: 'Downtown Hub A1', location: 'Mumbai, Maharashtra', managerName: 'Jordan Patel', managerId: 'u2', productCount: 142, status: 'active', createdAt: '2024-01-20' },
   { id: 's2', name: 'Westside Depot B2', location: 'Delhi, NCR', managerName: 'Morgan Lee', managerId: 'u3', productCount: 98, status: 'active', createdAt: '2024-02-05' },
-  { id: 's3', name: 'North Gate C3', location: 'Bangalore, Karnataka', managerName: 'Riley Chen', managerId: 'u4', productCount: 67, status: 'inactive', createdAt: '2024-02-20' },
+  { id: 's3', name: 'North Gate C3', location: 'Bangalore, Karnataka', managerName: 'Riley Chen', managerId: 'u4', productCount: 67, status: 'active', createdAt: '2024-02-20' },
   { id: 's4', name: 'Eastview Warehouse D4', location: 'Chennai, Tamil Nadu', managerName: 'Avery Smith', managerId: 'u5', productCount: 215, status: 'active', createdAt: '2024-03-15' },
   { id: 's5', name: 'Harbor Point E5', location: 'Hyderabad, Telangana', managerName: 'Sam Torres', managerId: 'u6', productCount: 88, status: 'active', createdAt: '2024-04-01' },
   { id: 's6', name: 'Sunrise Logistics F6', location: 'Pune, Maharashtra', productCount: 0, status: 'active', createdAt: '2024-05-10' },
@@ -64,6 +64,9 @@ export const LOGIN_CREDENTIALS = [
   { email: 'alex.sterling@nexus.com', password: 'admin123', userId: 'u1' },
   { email: 'jordan.patel@nexus.com', password: 'store123', userId: 'u2' },
   { email: 'morgan.lee@nexus.com', password: 'store123', userId: 'u3' },
+  { email: 'riley.chen@nexus.com', password: 'store456', userId: 'u4' },
+  { email: 'avery.smith@nexus.com', password: 'store789', userId: 'u5' },
+  { email: 'sam.torres@nexus.com', password: 'store321', userId: 'u6' },
 ];
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -277,6 +280,123 @@ export const DUMMY_PURCHASE_ORDERS: PurchaseOrder[] = [
     ],
     justification: 'Critical restock needed — ThinkPads are completely out of stock.',
     requestedAt: '2026-04-15T07:30:00', totalValue: 810000,
+  },
+];
+
+// ─── Suppliers ────────────────────────────────────────────────────────────────
+
+export const DUMMY_SUPPLIERS: Supplier[] = [
+  {
+    id: 'sup1', name: 'TechSource India Pvt. Ltd.', contactPerson: 'Rahul Mehta',
+    email: 'rahul.mehta@techsource.in', phone: '+91-98201-11234',
+    address: 'Plot 14, MIDC, Andheri East, Mumbai, Maharashtra',
+    categories: ['Laptops', 'Desktops', 'Mini PCs'],
+    status: 'active', rating: 5, totalOrders: 24, createdAt: '2024-01-15',
+    notes: 'Primary supplier for all computing hardware. Offers 3-year extended warranty.',
+  },
+  {
+    id: 'sup2', name: 'NetworkPro Solutions', contactPerson: 'Priya Sharma',
+    email: 'priya@networkpro.co.in', phone: '+91-99300-55678',
+    address: 'C-12, Sector 63, Noida, Uttar Pradesh',
+    categories: ['Networking', 'Peripherals'],
+    status: 'active', rating: 4, totalOrders: 16, createdAt: '2024-02-01',
+    notes: 'Cisco & Ubiquiti authorised reseller.',
+  },
+  {
+    id: 'sup3', name: 'DisplayTech Bangalore', contactPerson: 'Arjun Nair',
+    email: 'arjun@displaytech.in', phone: '+91-80456-77890',
+    address: '45, Hosur Road, Electronic City, Bangalore, Karnataka',
+    categories: ['Monitors'],
+    status: 'active', rating: 4, totalOrders: 11, createdAt: '2024-02-20',
+  },
+  {
+    id: 'sup4', name: 'StorageMart Pvt. Ltd.', contactPerson: 'Kavita Rao',
+    email: 'kavita@storagemart.in', phone: '+91-44789-12345',
+    address: '78, Anna Salai, Chennai, Tamil Nadu',
+    categories: ['Storage', 'Power'],
+    status: 'active', rating: 3, totalOrders: 9, createdAt: '2024-03-10',
+    notes: 'Good pricing on bulk NAS drives. Delivery can be slow.',
+  },
+  {
+    id: 'sup5', name: 'PrintStar Systems', contactPerson: 'Deepak Joshi',
+    email: 'deepak@printstar.in', phone: '+91-20567-89012',
+    address: '22, Pimpri-Chinchwad, Pune, Maharashtra',
+    categories: ['Printers', 'Peripherals'],
+    status: 'inactive', rating: 2, totalOrders: 4, createdAt: '2024-04-05',
+    notes: 'On hold — SLA breach in last quarter. Under review.',
+  },
+  {
+    id: 'sup6', name: 'Apple Premium Reseller – HYD', contactPerson: 'Sneha Reddy',
+    email: 'sneha@applereseller-hyd.in', phone: '+91-40234-56789',
+    address: 'Banjara Hills, Road No. 12, Hyderabad, Telangana',
+    categories: ['Laptops'],
+    status: 'active', rating: 5, totalOrders: 7, createdAt: '2024-03-25',
+    notes: 'Official Apple Authorised Reseller. Premium pricing but guaranteed stock.',
+  },
+];
+
+// ─── Maintenance Logs ─────────────────────────────────────────────────────────
+
+export const DUMMY_MAINTENANCE_LOGS: MaintenanceLog[] = [
+  {
+    id: 'ml1', productId: 'p3', productName: 'Lenovo ThinkPad X1', sku: 'LTP-X1-C10',
+    storeId: 's1', storeName: 'Downtown Hub A1',
+    type: 'warranty_claim', description: 'Keyboard unresponsive — raised warranty claim with Lenovo.',
+    status: 'completed', cost: 0, scheduledDate: '2026-03-20', completedDate: '2026-03-28',
+    technician: 'Lenovo Service Centre', createdBy: 'Jordan Patel', createdAt: '2026-03-18',
+    notes: 'Keyboard replaced under warranty. No extra cost.',
+  },
+  {
+    id: 'ml2', productId: 'p1', productName: 'Dell OptiPlex 7000', sku: 'DOP-7000-X',
+    storeId: 's1', storeName: 'Downtown Hub A1',
+    type: 'preventive', description: 'Annual hardware health check — dust cleaning, thermal paste replacement.',
+    status: 'completed', cost: 2500, scheduledDate: '2026-02-10', completedDate: '2026-02-12',
+    technician: 'In-house IT Team', createdBy: 'Jordan Patel', createdAt: '2026-02-08',
+  },
+  {
+    id: 'ml3', productId: 'p8', productName: 'APC UPS 1500VA', sku: 'APC-UPS-15',
+    storeId: 's4', storeName: 'Eastview Warehouse D4',
+    type: 'corrective', description: 'Battery failed — unit not holding charge. Replacement battery ordered.',
+    status: 'in_progress', cost: 4200, scheduledDate: '2026-04-10',
+    technician: 'APC Certified Partner', createdBy: 'Avery Smith', createdAt: '2026-04-09',
+    notes: 'Awaiting battery shipment from supplier.',
+  },
+  {
+    id: 'ml4', productId: 'p5', productName: 'Cisco Catalyst 2960', sku: 'CIS-2960-X',
+    storeId: 's2', storeName: 'Westside Depot B2',
+    type: 'inspection', description: 'Quarterly network switch inspection — port status, firmware check.',
+    status: 'completed', cost: 1500, scheduledDate: '2026-03-01', completedDate: '2026-03-01',
+    technician: 'NetworkPro Solutions', createdBy: 'Morgan Lee', createdAt: '2026-02-28',
+  },
+  {
+    id: 'ml5', productId: 'p11', productName: 'Ubiquiti UniFi AP', sku: 'UBQ-UAP-AC',
+    storeId: 's5', storeName: 'Harbor Point E5',
+    type: 'corrective', description: 'Access point dropping connections intermittently. Firmware reset required.',
+    status: 'scheduled', scheduledDate: '2026-04-20',
+    technician: 'NetworkPro Solutions', createdBy: 'Sam Torres', createdAt: '2026-04-15',
+  },
+  {
+    id: 'ml6', productId: 'p9', productName: 'HP LaserJet Pro M404', sku: 'HPL-404-N',
+    storeId: 's4', storeName: 'Eastview Warehouse D4',
+    type: 'preventive', description: 'Toner replacement and roller cleaning. Scheduled monthly service.',
+    status: 'completed', cost: 3800, scheduledDate: '2026-04-05', completedDate: '2026-04-05',
+    technician: 'PrintStar Systems', createdBy: 'Avery Smith', createdAt: '2026-04-04',
+  },
+  {
+    id: 'ml7', productId: 'p13', productName: 'Synology DS920+', sku: 'SYN-DS920',
+    storeId: 's1', storeName: 'Downtown Hub A1',
+    type: 'inspection', description: 'RAID health check — verify disk array integrity and redundancy.',
+    status: 'scheduled', scheduledDate: '2026-04-22',
+    technician: 'In-house IT Team', createdBy: 'Alex Sterling', createdAt: '2026-04-15',
+    notes: 'Schedule before warranty expires in Aug 2025.',
+  },
+  {
+    id: 'ml8', productId: 'p6', productName: 'Apple MacBook Pro 14"', sku: 'APL-MBP-14',
+    storeId: 's2', storeName: 'Westside Depot B2',
+    type: 'corrective', description: 'Display flickering reported. Sent to Apple Service for diagnosis.',
+    status: 'cancelled', scheduledDate: '2026-03-15',
+    technician: 'Apple Premium Reseller – HYD', createdBy: 'Morgan Lee', createdAt: '2026-03-14',
+    notes: 'Cancelled — user reported issue resolved after macOS update.',
   },
 ];
 

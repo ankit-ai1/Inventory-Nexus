@@ -146,6 +146,49 @@ export interface PurchaseOrder {
   totalValue: number;
 }
 
+// ─── Suppliers ───────────────────────────────────────────────────────────────
+
+export type SupplierStatus = 'active' | 'inactive';
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  categories: string[];
+  status: SupplierStatus;
+  rating: 1 | 2 | 3 | 4 | 5;
+  totalOrders: number;
+  createdAt: string;
+  notes?: string;
+}
+
+// ─── Maintenance Log ─────────────────────────────────────────────────────────
+
+export type MaintenanceType = 'preventive' | 'corrective' | 'warranty_claim' | 'inspection';
+export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface MaintenanceLog {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  storeName: string;
+  type: MaintenanceType;
+  description: string;
+  status: MaintenanceStatus;
+  cost?: number;
+  scheduledDate: string;
+  completedDate?: string;
+  technician: string;
+  createdBy: string;
+  createdAt: string;
+  notes?: string;
+}
+
 // ─── Stock Transfers ─────────────────────────────────────────────────────────
 
 export type TransferStatus = 'pending' | 'approved' | 'rejected' | 'completed';

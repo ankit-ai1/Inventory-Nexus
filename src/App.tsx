@@ -12,6 +12,8 @@ import PurchaseOrdersPage from './pages/PurchaseOrdersPage';
 import TransfersPage from './pages/TransfersPage';
 import AuditLogPage from './pages/AuditLogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
+import SuppliersPage from './pages/SuppliersPage';
+import MaintenancePage from './pages/MaintenancePage';
 import ToastContainer from './components/ToastContainer';
 import type { ReactNode } from 'react';
 
@@ -44,6 +46,8 @@ function AppRoutes() {
       <Route path="/purchase-orders" element={<ProtectedRoute><PurchaseOrdersPage /></ProtectedRoute>} />
       <Route path="/transfers" element={<ProtectedRoute><TransfersPage /></ProtectedRoute>} />
       <Route path="/audit-log" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
+      <Route path="/suppliers" element={<AdminRoute><SuppliersPage /></AdminRoute>} />
+      <Route path="/maintenance" element={<ProtectedRoute><MaintenancePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/login'} replace />} />
     </Routes>
   );

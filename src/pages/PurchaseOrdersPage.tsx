@@ -17,6 +17,7 @@ const CATEGORIES = ['Desktops', 'Laptops', 'Monitors', 'Networking', 'Peripheral
 interface POFormData {
   justification: string;
   items: PurchaseOrderItem[];
+  storeId: string;
 }
 
 const emptyItem = (): PurchaseOrderItem => ({ productName: '', sku: '', category: 'Laptops', quantity: 1, price: 0 });
@@ -31,7 +32,7 @@ export default function PurchaseOrdersPage() {
   const [reviewPO, setReviewPO] = useState<PurchaseOrder | null>(null);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComment, setReviewComment] = useState('');
-  const [formData, setFormData] = useState<POFormData>({ justification: '', items: [emptyItem()] });
+  const [formData, setFormData] = useState<POFormData>({ justification: '', items: [emptyItem()], storeId: '' });
 
   const myPOs = isAdmin
     ? purchaseOrders
@@ -41,7 +42,9 @@ export default function PurchaseOrdersPage() {
     myPOs.filter(p => filterStatus === 'all' || p.status === filterStatus),
     [myPOs, filterStatus]);
 
-  const myStore = stores.find(s => s.id === currentUser?.storeId);
+  const myStore = isAdmin
+    ? stores.find(s => s.id === formData.storeId)
+    : stores.find(s => s.id === currentUser?.storeId);
 
   const handleAddItem = () => setFormData(f => ({ ...f, items: [...f.items, emptyItem()] }));
   const handleRemoveItem = (i: number) => setFormData(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
@@ -52,15 +55,17 @@ export default function PurchaseOrdersPage() {
   const totalFormValue = formData.items.reduce((s, i) => s + i.quantity * i.price, 0);
 
   const handleSubmitPO = () => {
+    if (isAdmin && !formData.storeId) { showToast('Please select a store.', 'error'); return; }
     if (!formData.justification.trim()) { showToast('Please enter a justification.', 'error'); return; }
     if (formData.items.some(i => !i.productName || !i.sku || i.quantity < 1)) {
       showToast('Please fill all item fields.', 'error'); return;
     }
+    const targetStoreId = isAdmin ? formData.storeId : (currentUser?.storeId || '');
     const po: PurchaseOrder = {
       id: 'po' + Date.now(),
       poNumber: 'PO-2026-' + String(purchaseOrders.length + 1).padStart(3, '0'),
       status: 'pending',
-      storeId: currentUser?.storeId || '',
+      storeId: targetStoreId,
       storeName: myStore?.name || currentUser?.storeName || '',
       requestedBy: currentUser?.name || '',
       requestedById: currentUser?.id || '',
@@ -74,7 +79,7 @@ export default function PurchaseOrdersPage() {
     addNotification({ type: 'purchase_order', title: 'New Purchase Order', message: `${po.poNumber} submitted by ${po.requestedBy}. Awaiting admin review.`, link: '/purchase-orders' });
     showToast(`Purchase Order ${po.poNumber} submitted!`);
     setShowModal(false);
-    setFormData({ justification: '', items: [emptyItem()] });
+    setFormData({ justification: '', items: [emptyItem()], storeId: '' });
   };
 
   const handleReview = () => {
@@ -125,12 +130,10 @@ export default function PurchaseOrdersPage() {
             <h1>Purchase Orders</h1>
             <p>Raise purchase requests, track approval status, and confirm stock receipt.</p>
           </div>
-          {!isAdmin && (
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-              <span className="material-symbols-outlined">add</span>
-              Raise New PO
-            </button>
-          )}
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <span className="material-symbols-outlined">add</span>
+            Raise New PO
+          </button>
         </div>
 
         {/* Stats */}
@@ -270,9 +273,22 @@ export default function PurchaseOrdersPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'var(--surface-container-low)', borderRadius: '0.5rem', fontSize: '0.8125rem', color: 'var(--secondary)' }}>
-              Raising for: <strong style={{ color: 'var(--on-surface)' }}>{myStore?.name || currentUser?.storeName || '—'}</strong>
-            </div>
+            {isAdmin ? (
+              <div className="form-group">
+                <label className="form-label">Store *</label>
+                <select className="form-select" value={formData.storeId}
+                  onChange={e => setFormData(f => ({ ...f, storeId: e.target.value }))}>
+                  <option value="">Select store...</option>
+                  {stores.filter(s => s.status === 'active').map(s => (
+                    <option key={s.id} value={s.id}>{s.name} — {s.location}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: 'var(--surface-container-low)', borderRadius: '0.5rem', fontSize: '0.8125rem', color: 'var(--secondary)' }}>
+                Raising for: <strong style={{ color: 'var(--on-surface)' }}>{myStore?.name || currentUser?.storeName || '—'}</strong>
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Justification *</label>

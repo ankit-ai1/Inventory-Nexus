@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { User, Toast, Product, Store, AppNotification, AuditLog, PurchaseOrder, StockTransfer } from '../types';
+import type { User, Toast, Product, Store, AppNotification, AuditLog, PurchaseOrder, StockTransfer, Supplier, MaintenanceLog } from '../types';
 import {
   DUMMY_USERS, DUMMY_STORES, DUMMY_PRODUCTS,
   DUMMY_NOTIFICATIONS, DUMMY_AUDIT_LOGS,
   DUMMY_PURCHASE_ORDERS, DUMMY_TRANSFERS,
+  DUMMY_SUPPLIERS, DUMMY_MAINTENANCE_LOGS,
 } from '../data/dummy';
 
 interface AppContextType {
@@ -39,6 +40,12 @@ interface AppContextType {
   // Transfers
   transfers: StockTransfer[];
   setTransfers: React.Dispatch<React.SetStateAction<StockTransfer[]>>;
+  // Suppliers
+  suppliers: Supplier[];
+  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+  // Maintenance
+  maintenanceLogs: MaintenanceLog[];
+  setMaintenanceLogs: React.Dispatch<React.SetStateAction<MaintenanceLog[]>>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -54,6 +61,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(DUMMY_AUDIT_LOGS);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(DUMMY_PURCHASE_ORDERS);
   const [transfers, setTransfers] = useState<StockTransfer[]>(DUMMY_TRANSFERS);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(DUMMY_SUPPLIERS);
+  const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>(DUMMY_MAINTENANCE_LOGS);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -121,6 +130,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       auditLogs, addAuditLog,
       purchaseOrders, setPurchaseOrders,
       transfers, setTransfers,
+      suppliers, setSuppliers,
+      maintenanceLogs, setMaintenanceLogs,
     }}>
       {children}
     </AppContext.Provider>

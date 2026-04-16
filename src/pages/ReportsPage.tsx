@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
@@ -58,6 +59,7 @@ function CategoryDonut({ data }: { data: { label: string; value: number; color: 
 
 export default function ReportsPage() {
   const { currentUser, products, stores, auditLogs } = useApp();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('summary');
   const isAdmin = currentUser?.role === 'head_admin';
 
@@ -259,9 +261,10 @@ export default function ReportsPage() {
                         {isAdmin && <td style={{ fontSize: '0.8125rem' }}>{p.storeName}</td>}
                         <td>₹{p.price.toLocaleString()}</td>
                         <td>
-                          <span style={{ fontSize: '0.75rem', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '1rem', fontWeight: 700 }}>
+                          <button onClick={() => navigate('/purchase-orders')}
+                            style={{ fontSize: '0.75rem', background: 'var(--primary)', color: 'white', padding: '2px 10px', borderRadius: '1rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
                             Raise PO
-                          </span>
+                          </button>
                         </td>
                       </tr>
                     ))}

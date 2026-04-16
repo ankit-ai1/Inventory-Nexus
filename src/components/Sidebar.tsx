@@ -15,7 +15,7 @@ interface NavGroup {
 }
 
 export default function Sidebar() {
-  const { currentUser, logout, sidebarOpen, setSidebarOpen, unreadCount, purchaseOrders } = useApp();
+  const { currentUser, logout, sidebarOpen, setSidebarOpen, purchaseOrders } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,7 +29,6 @@ export default function Sidebar() {
       label: 'Overview',
       items: [
         { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
-        { icon: 'notifications', label: 'Notifications', path: '/notifications', badge: unreadCount },
       ],
     },
     {
@@ -38,6 +37,8 @@ export default function Sidebar() {
         { icon: 'inventory_2', label: 'Inventory', path: '/inventory' },
         { icon: 'receipt_long', label: 'Purchase Orders', path: '/purchase-orders', badge: isAdmin ? pendingPOs : 0 },
         { icon: 'swap_horiz', label: 'Transfers', path: '/transfers' },
+        { icon: 'build', label: 'Maintenance', path: '/maintenance' },
+        ...(isAdmin ? [{ icon: 'local_shipping', label: 'Suppliers', path: '/suppliers', adminOnly: true }] : []),
       ],
     },
     {
