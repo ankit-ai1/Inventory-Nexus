@@ -40,9 +40,9 @@ export default function TopBar({ searchPlaceholder = 'Search...', onSearch }: To
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowUserMenu(false);
-    logout();
+    await logout();
     navigate('/login');
   };
 

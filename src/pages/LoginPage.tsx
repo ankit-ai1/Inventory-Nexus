@@ -1,63 +1,53 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { LOGIN_CREDENTIALS, DUMMY_USERS } from '../data/dummy';
-
-const DEMO_ACCOUNTS = [
-  {
-    role: 'Head Admin',
-    name: 'Alex Sterling',
-    email: 'alex.sterling@nexus.com',
-    password: 'admin123',
-    color: '#00478d',
-    bg: '#eff6ff',
-    initials: 'AS',
-  },
-  {
-    role: 'Store Manager',
-    name: 'Jordan Patel',
-    email: 'jordan.patel@nexus.com',
-    password: 'store123',
-    color: '#1a7f4e',
-    bg: '#f0fdf4',
-    initials: 'JP',
-  },
-];
 
 export default function LoginPage() {
   const { login, showToast } = useApp();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem('inv_remember_email') || ''; } catch { return ''; }
+  });
+  const [password, setPassword] = useState(() => {
+    try { return localStorage.getItem('inv_remember_pass') || ''; } catch { return ''; }
+  });
   const [showPass, setShowPass] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    try { return !!localStorage.getItem('inv_remember_email'); } catch { return false; }
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      const cred = LOGIN_CREDENTIALS.find(c => c.email === email && c.password === password);
-      if (cred) {
-        const user = DUMMY_USERS.find(u => u.id === cred.userId);
-        if (user) {
-          login(user);
-          showToast(`Welcome back, ${user.name.split(' ')[0]}!`);
-          navigate('/dashboard');
+    try {
+      await login(email, password);
+      try {
+        if (rememberMe) {
+          localStorage.setItem('inv_remember_email', email);
+          localStorage.setItem('inv_remember_pass', password);
+        } else {
+          localStorage.removeItem('inv_remember_email');
+          localStorage.removeItem('inv_remember_pass');
         }
-      } else {
-        setError('Incorrect email or password. Use a demo account below.');
-      }
+      } catch { /* noop */ }
+      const firstName = email.split('@')[0].split('.')[0];
+      showToast(`Welcome back, ${firstName.charAt(0).toUpperCase() + firstName.slice(1)}!`);
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Incorrect email or password.');
+    } finally {
       setLoading(false);
-    }, 700);
+    }
   };
 
-  const fillDemo = (acc: typeof DEMO_ACCOUNTS[number]) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setError('');
+  const handleRememberMe = (checked: boolean) => {
+    setRememberMe(checked);
+    if (!checked) {
+      try { localStorage.removeItem('inv_remember_email'); localStorage.removeItem('inv_remember_pass'); } catch { /* noop */ }
+    }
   };
 
   return (
@@ -183,7 +173,7 @@ export default function LoginPage() {
             <input
               type="checkbox"
               checked={rememberMe}
-              onChange={e => setRememberMe(e.target.checked)}
+              onChange={e => handleRememberMe(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }}
             />
             <span style={{ fontSize: '0.875rem', color: 'var(--secondary)' }}>Remember me</span>
@@ -230,42 +220,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Demo accounts */}
-        <div style={{ marginTop: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.875rem' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--outline-variant)' }} />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>DEMO ACCOUNTS</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--outline-variant)' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {DEMO_ACCOUNTS.map(acc => (
-              <button
-                key={acc.email}
-                type="button"
-                onClick={() => fillDemo(acc)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.625rem 0.875rem', borderRadius: '0.625rem',
-                  border: `1.5px solid ${acc.color}22`,
-                  background: acc.bg, cursor: 'pointer',
-                  transition: 'all 0.15s', textAlign: 'left',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = acc.color; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 2px 8px ${acc.color}22`; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = `${acc.color}22`; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
-              >
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: acc.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.6875rem', fontWeight: 800, fontFamily: 'Manrope, sans-serif', flexShrink: 0 }}>
-                  {acc.initials}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: acc.color }}>{acc.name}</div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--secondary)' }}>{acc.role} · {acc.email}</div>
-                </div>
-                <span className="material-symbols-outlined" style={{ fontSize: 16, color: acc.color, flexShrink: 0 }}>arrow_forward</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         <p style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.6875rem', color: 'var(--secondary)' }}>
           © 2025 Inventory Nexus · Secure Core v4.2.1

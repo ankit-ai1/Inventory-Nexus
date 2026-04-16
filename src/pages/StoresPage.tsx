@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import type { Store } from '../types';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 interface StoreFormData {
   name: string;
@@ -42,28 +45,41 @@ export default function StoresPage() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.location) {
       showToast('Name and location are required.', 'error');
       return;
     }
     const manager = storeManagers.find(u => u.id === formData.managerId);
     if (editingStore) {
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('stores').update({
+          name: formData.name, location: formData.location,
+          manager_id: formData.managerId || null,
+          manager_name: manager?.name || null,
+          status: formData.status,
+        }).eq('id', editingStore.id);
+        if (error) { showToast('Failed to update store.', 'error'); return; }
+      }
       setStores(prev => prev.map(s => s.id === editingStore.id ? {
-        ...s, ...formData,
-        managerName: manager?.name || undefined,
-        productCount: s.productCount,
+        ...s, ...formData, managerName: manager?.name || undefined, productCount: s.productCount,
       } : s));
       showToast('Store updated successfully!');
     } else {
+      const newId = 's' + Date.now();
+      const now = new Date().toISOString().slice(0, 10);
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('stores').insert({
+          id: newId, name: formData.name, location: formData.location,
+          manager_id: formData.managerId || null, manager_name: manager?.name || null,
+          product_count: 0, status: formData.status, created_at: now,
+        });
+        if (error) { showToast('Failed to create store: ' + error.message, 'error'); return; }
+      }
       const newStore: Store = {
-        id: 's' + Date.now(),
-        name: formData.name, location: formData.location,
-        managerId: formData.managerId || undefined,
-        managerName: manager?.name,
-        productCount: 0,
-        status: formData.status,
-        createdAt: new Date().toISOString().slice(0, 10),
+        id: newId, name: formData.name, location: formData.location,
+        managerId: formData.managerId || undefined, managerName: manager?.name,
+        productCount: 0, status: formData.status, createdAt: now,
       };
       setStores(prev => [newStore, ...prev]);
       showToast('Store created successfully!');
@@ -71,7 +87,11 @@ export default function StoresPage() {
     setShowModal(false);
   };
 
-  const handleDelete = (s: Store) => {
+  const handleDelete = async (s: Store) => {
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('stores').delete().eq('id', s.id);
+      if (error) { showToast('Failed to delete store.', 'error'); setDeleteConfirm(null); return; }
+    }
     setStores(prev => prev.filter(x => x.id !== s.id));
     setDeleteConfirm(null);
     showToast('Store deleted.', 'error');

@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import type { StockTransfer, TransferStatus, TransferType } from '../types';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const STATUS_INFO: Record<TransferStatus, { label: string; cls: string; icon: string }> = {
   pending:    { label: 'Pending Approval', cls: 'chip-warning', icon: 'hourglass_empty' },
@@ -84,7 +87,7 @@ export default function TransfersPage() {
   const pullFromStore = stores.find(s => s.id === pullData.fromStoreId);
 
   // ── Push Transfer ─────────────────────────────────────────────────────────
-  const handleSubmitPush = () => {
+  const handleSubmitPush = async () => {
     if (!formData.productId || !formData.toStoreId || !formData.quantity) {
       showToast('Please fill all required fields.', 'error'); return;
     }
@@ -113,6 +116,19 @@ export default function TransfersPage() {
       requestedAt: new Date().toISOString(),
     };
 
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('stock_transfers').insert({
+        id: transfer.id, transfer_number: transfer.transferNumber, status: transfer.status,
+        transfer_type: transfer.transferType, from_store_id: transfer.fromStoreId,
+        from_store_name: transfer.fromStoreName, to_store_id: transfer.toStoreId,
+        to_store_name: transfer.toStoreName, product_id: transfer.productId,
+        product_name: transfer.productName, sku: transfer.sku, quantity: transfer.quantity,
+        requested_by: transfer.requestedBy, requested_by_id: transfer.requestedById,
+        requested_by_store_id: transfer.requestedByStoreId || null,
+        notes: transfer.notes || null, requested_at: transfer.requestedAt,
+      });
+      if (error) { showToast('Failed to submit transfer: ' + error.message, 'error'); return; }
+    }
     setTransfers(prev => [transfer, ...prev]);
     addAuditLog({
       action: 'create', module: 'transfer', entityId: transfer.id, entityName: transfer.transferNumber,
@@ -129,7 +145,7 @@ export default function TransfersPage() {
   };
 
   // ── Pull (Stock Request) ──────────────────────────────────────────────────
-  const handleSubmitPull = () => {
+  const handleSubmitPull = async () => {
     if (!pullData.fromStoreId || !pullData.productId || !pullData.quantity) {
       showToast('Please fill all required fields.', 'error'); return;
     }
@@ -159,6 +175,19 @@ export default function TransfersPage() {
       requestedAt: new Date().toISOString(),
     };
 
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('stock_transfers').insert({
+        id: transfer.id, transfer_number: transfer.transferNumber, status: transfer.status,
+        transfer_type: transfer.transferType, from_store_id: transfer.fromStoreId,
+        from_store_name: transfer.fromStoreName, to_store_id: transfer.toStoreId,
+        to_store_name: transfer.toStoreName, product_id: transfer.productId,
+        product_name: transfer.productName, sku: transfer.sku, quantity: transfer.quantity,
+        requested_by: transfer.requestedBy, requested_by_id: transfer.requestedById,
+        requested_by_store_id: transfer.requestedByStoreId || null,
+        notes: transfer.notes || null, requested_at: transfer.requestedAt,
+      });
+      if (error) { showToast('Failed to submit request: ' + error.message, 'error'); return; }
+    }
     setTransfers(prev => [transfer, ...prev]);
     addAuditLog({
       action: 'create', module: 'transfer', entityId: transfer.id, entityName: transfer.transferNumber,
@@ -175,12 +204,33 @@ export default function TransfersPage() {
   };
 
   // ── Admin Review ──────────────────────────────────────────────────────────
-  const handleReview = () => {
+  const handleReview = async () => {
     if (!reviewTransfer) return;
     const now = new Date().toISOString();
 
     if (reviewAction === 'approve') {
       const trackingId = 'TRK-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('stock_transfers').update({
+          status: 'in_transit',
+          approved_by: currentUser?.name,
+          approved_at: now,
+          shipped_at: now,
+          tracking_id: trackingId,
+          notes: reviewNotes || reviewTransfer.notes || null,
+        }).eq('id', reviewTransfer.id);
+        if (error) { showToast('Failed to approve transfer: ' + error.message, 'error'); return; }
+
+        // Deduct stock from source product
+        const srcProduct = products.find(p => p.id === reviewTransfer.productId && p.storeId === reviewTransfer.fromStoreId);
+        if (srcProduct) {
+          const newQty = Math.max(0, srcProduct.quantity - reviewTransfer.quantity);
+          const newStatus = newQty === 0 ? 'out_of_stock' : newQty <= 10 ? 'low_stock' : 'in_stock';
+          await supabase.from('products').update({ quantity: newQty, stock_status: newStatus }).eq('id', srcProduct.id);
+        }
+      }
+
       setTransfers(prev => prev.map(t => t.id === reviewTransfer.id ? {
         ...t,
         status: 'in_transit' as TransferStatus,
@@ -214,6 +264,15 @@ export default function TransfersPage() {
       showToast(`Transfer approved! Now in-transit. Tracking: ${trackingId}`);
 
     } else {
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('stock_transfers').update({
+          status: 'rejected',
+          approved_by: currentUser?.name,
+          approved_at: now,
+          notes: reviewNotes || reviewTransfer.notes || null,
+        }).eq('id', reviewTransfer.id);
+        if (error) { showToast('Failed to reject transfer: ' + error.message, 'error'); return; }
+      }
       setTransfers(prev => prev.map(t => t.id === reviewTransfer.id ? {
         ...t, status: 'rejected' as TransferStatus,
         approvedBy: currentUser?.name, approvedAt: now,
@@ -236,8 +295,44 @@ export default function TransfersPage() {
   };
 
   // ── Confirm Receipt ───────────────────────────────────────────────────────
-  const handleConfirmReceipt = (transfer: StockTransfer) => {
+  const handleConfirmReceipt = async (transfer: StockTransfer) => {
     const now = new Date().toISOString();
+
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('stock_transfers').update({
+        status: 'completed',
+        completed_at: now,
+        received_by_name: currentUser?.name,
+      }).eq('id', transfer.id);
+      if (error) { showToast('Failed to confirm receipt: ' + error.message, 'error'); return; }
+
+      // Add stock to destination
+      const destProduct = products.find(p => p.id === transfer.productId && p.storeId === transfer.toStoreId);
+      if (destProduct) {
+        const newQty = destProduct.quantity + transfer.quantity;
+        const newStatus = newQty === 0 ? 'out_of_stock' : newQty <= 10 ? 'low_stock' : 'in_stock';
+        await supabase.from('products').update({ quantity: newQty, stock_status: newStatus }).eq('id', destProduct.id);
+      } else {
+        // Create a new product entry at destination store
+        const srcProduct = products.find(p => p.id === transfer.productId);
+        if (srcProduct) {
+          const destStore = stores.find(s => s.id === transfer.toStoreId);
+          const newId = 'p' + Date.now();
+          const newStatus = transfer.quantity <= 10 ? 'low_stock' : 'in_stock';
+          await supabase.from('products').insert({
+            id: newId, name: srcProduct.name, sku: srcProduct.sku, category: srcProduct.category,
+            quantity: transfer.quantity, price: srcProduct.price,
+            store_id: transfer.toStoreId, store_name: destStore?.name || transfer.toStoreName,
+            stock_status: newStatus, created_at: now,
+            warranty_start_date: srcProduct.warrantyStartDate || null,
+            warranty_end_date: srcProduct.warrantyEndDate || null,
+            warranty_status: srcProduct.warrantyStatus || null,
+            notes: srcProduct.notes || null,
+          });
+        }
+      }
+    }
+
     setTransfers(prev => prev.map(t => t.id === transfer.id ? {
       ...t, status: 'completed' as TransferStatus, completedAt: now, receivedByName: currentUser?.name,
     } : t));

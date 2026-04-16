@@ -1,20 +1,44 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import { useNavigate } from 'react-router-dom';
 
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+
 export default function SettingsPage() {
-  const { currentUser, logout, showToast } = useApp();
+  const { currentUser, patchCurrentUser, logout, showToast } = useApp();
   const navigate = useNavigate();
   const isAdmin = currentUser?.role === 'head_admin';
   const initials = currentUser?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
 
   const [name, setName] = useState(currentUser?.name || '');
   const [email] = useState(currentUser?.email || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleSave = () => {
-    showToast('Profile updated successfully!');
+  const handleSave = async () => {
+    if (!name.trim()) { showToast('Name cannot be empty.', 'error'); return; }
+    try {
+      await patchCurrentUser({ name: name.trim() });
+      showToast('Profile updated successfully!');
+    } catch {
+      showToast('Failed to update profile.', 'error');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!newPassword) { showToast('Enter a new password.', 'error'); return; }
+    if (newPassword.length < 6) { showToast('Password must be at least 6 characters.', 'error'); return; }
+    if (newPassword !== confirmPassword) { showToast('Passwords do not match.', 'error'); return; }
+    if (SUPABASE_ON) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) { showToast('Failed to change password: ' + error.message, 'error'); return; }
+    }
+    setNewPassword('');
+    setConfirmPassword('');
+    showToast('Password changed successfully!');
   };
 
   const handleLogout = () => {
@@ -98,13 +122,13 @@ export default function SettingsPage() {
               </h3>
               <div className="form-group">
                 <label className="form-label">New Password</label>
-                <input className="form-input" type="password" placeholder="••••••••" />
+                <input className="form-input" type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Confirm Password</label>
-                <input className="form-input" type="password" placeholder="••••••••" />
+                <input className="form-input" type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
               </div>
-              <button className="btn btn-secondary" onClick={() => showToast('Password change functionality is mocked.')}>
+              <button className="btn btn-secondary" onClick={handleChangePassword}>
                 <span className="material-symbols-outlined">lock_reset</span>
                 Change Password
               </button>

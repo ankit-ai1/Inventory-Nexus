@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import { useNavigate } from 'react-router-dom';
 import type { Product, StockStatus, WarrantyStatus } from '../types';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const CATEGORIES = ['Desktops', 'Laptops', 'Monitors', 'Networking', 'Peripherals', 'Power', 'Printers', 'Mini PCs', 'Storage'];
 
@@ -90,7 +93,7 @@ export default function InventoryPage() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.sku || !formData.quantity || !formData.price || !formData.storeId) {
       showToast('Please fill all required fields.', 'error');
       return;
@@ -106,6 +109,18 @@ export default function InventoryPage() {
       if (editingProduct.price !== parseFloat(formData.price)) changes.push({ field: 'Price', from: String(editingProduct.price), to: formData.price });
       if (editingProduct.name !== formData.name) changes.push({ field: 'Name', from: editingProduct.name, to: formData.name });
 
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('products').update({
+          name: formData.name, sku: formData.sku, category: formData.category,
+          quantity: qty, price: parseFloat(formData.price),
+          warranty_start_date: formData.warrantyStartDate || null,
+          warranty_end_date: formData.warrantyEndDate || null,
+          store_id: formData.storeId, store_name: store?.name || null,
+          stock_status: stockStatus, warranty_status: warrantyStatus,
+          notes: formData.notes || null,
+        }).eq('id', editingProduct.id);
+        if (error) { showToast('Failed to update product.', 'error'); return; }
+      }
       setProducts(prev => prev.map(p => p.id === editingProduct.id ? {
         ...p, ...formData, quantity: qty, price: parseFloat(formData.price),
         storeName: store?.name || p.storeName, stockStatus, warrantyStatus,
@@ -113,21 +128,39 @@ export default function InventoryPage() {
       addAuditLog({ action: 'update', module: 'product', entityId: editingProduct.id, entityName: formData.name, details: `Product updated`, changes });
       showToast('Product updated successfully!');
     } else {
+      const newId = 'p' + Date.now();
+      const now = new Date().toISOString().slice(0, 10);
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('products').insert({
+          id: newId, name: formData.name, sku: formData.sku, category: formData.category,
+          quantity: qty, price: parseFloat(formData.price),
+          warranty_start_date: formData.warrantyStartDate || null,
+          warranty_end_date: formData.warrantyEndDate || null,
+          store_id: formData.storeId, store_name: store?.name || null,
+          stock_status: stockStatus, warranty_status: warrantyStatus,
+          created_at: now, notes: formData.notes || null,
+        });
+        if (error) { showToast('Failed to add product: ' + error.message, 'error'); return; }
+      }
       const newProduct: Product = {
-        id: 'p' + Date.now(), name: formData.name, sku: formData.sku, category: formData.category,
+        id: newId, name: formData.name, sku: formData.sku, category: formData.category,
         quantity: qty, price: parseFloat(formData.price), warrantyStartDate: formData.warrantyStartDate,
         warrantyEndDate: formData.warrantyEndDate, storeId: formData.storeId,
         storeName: store?.name || '', stockStatus, warrantyStatus,
-        createdAt: new Date().toISOString().slice(0, 10), notes: formData.notes,
+        createdAt: now, notes: formData.notes,
       };
       setProducts(prev => [newProduct, ...prev]);
-      addAuditLog({ action: 'create', module: 'product', entityId: newProduct.id, entityName: newProduct.name, details: `Product added to ${store?.name}` });
+      addAuditLog({ action: 'create', module: 'product', entityId: newId, entityName: formData.name, details: `Product added to ${store?.name}` });
       showToast('Product added successfully!');
     }
     setShowModal(false);
   };
 
-  const handleDelete = (p: Product) => {
+  const handleDelete = async (p: Product) => {
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('products').delete().eq('id', p.id);
+      if (error) { showToast('Failed to delete product.', 'error'); setDeleteConfirm(null); return; }
+    }
     setProducts(prev => prev.filter(x => x.id !== p.id));
     addAuditLog({ action: 'delete', module: 'product', entityId: p.id, entityName: p.name, details: `Product deleted from ${p.storeName}` });
     setDeleteConfirm(null);

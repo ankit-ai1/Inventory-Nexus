@@ -1,21 +1,25 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import type { User, UserRole } from '../types';
 
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+
 interface UserFormData {
   name: string;
   email: string;
+  password: string;
   role: UserRole;
   storeId: string;
   status: 'active' | 'inactive';
 }
 
-const emptyForm: UserFormData = { name: '', email: '', role: 'store_manager', storeId: '', status: 'active' };
+const emptyForm: UserFormData = { name: '', email: '', password: '', role: 'store_manager', storeId: '', status: 'active' };
 
 export default function UsersPage() {
-  const { users, setUsers, stores, showToast } = useApp();
+  const { users, setUsers, stores, showToast, createUser } = useApp();
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -40,43 +44,68 @@ export default function UsersPage() {
 
   const openEdit = (u: User) => {
     setEditingUser(u);
-    setFormData({ name: u.name, email: u.email, role: u.role, storeId: u.storeId || '', status: u.status });
+    setFormData({ name: u.name, email: u.email, password: '', role: u.role, storeId: u.storeId || '', status: u.status });
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.email) {
       showToast('Name and email are required.', 'error');
       return;
     }
     const store = stores.find(s => s.id === formData.storeId);
     if (editingUser) {
+      const updates = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        store_id: formData.storeId || null,
+        store_name: store?.name || null,
+        status: formData.status,
+      };
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('profiles').update(updates).eq('id', editingUser.id);
+        if (error) { showToast('Failed to update user.', 'error'); return; }
+      }
       setUsers(prev => prev.map(u => u.id === editingUser.id ? {
-        ...u, ...formData,
-        storeName: store?.name || u.storeName,
+        ...u, ...formData, storeName: store?.name || u.storeName,
       } : u));
       showToast('User updated successfully!');
     } else {
-      const newUser: User = {
-        id: 'u' + Date.now(),
-        name: formData.name, email: formData.email,
-        role: formData.role, storeId: formData.storeId,
-        storeName: store?.name,
-        status: formData.status,
-        createdAt: new Date().toISOString().slice(0, 10),
-      };
-      setUsers(prev => [newUser, ...prev]);
-      showToast('User created successfully!');
+      if (!formData.password || formData.password.length < 6) {
+        showToast('Password must be at least 6 characters.', 'error');
+        return;
+      }
+      try {
+        await createUser({
+          name: formData.name, email: formData.email, password: formData.password,
+          role: formData.role, storeId: formData.storeId,
+          storeName: store?.name, status: formData.status,
+        });
+        showToast('User created successfully!');
+      } catch (err: unknown) {
+        showToast(err instanceof Error ? err.message : 'Failed to create user.', 'error');
+        return;
+      }
     }
     setShowModal(false);
   };
 
-  const handleToggleStatus = (u: User) => {
-    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, status: x.status === 'active' ? 'inactive' : 'active' } : x));
-    showToast(`User ${u.status === 'active' ? 'disabled' : 'enabled'}.`);
+  const handleToggleStatus = async (u: User) => {
+    const newStatus = u.status === 'active' ? 'inactive' : 'active';
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', u.id);
+      if (error) { showToast('Failed to update status.', 'error'); return; }
+    }
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, status: newStatus } : x));
+    showToast(`User ${newStatus === 'active' ? 'enabled' : 'disabled'}.`);
   };
 
-  const handleDelete = (u: User) => {
+  const handleDelete = async (u: User) => {
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('profiles').delete().eq('id', u.id);
+      if (error) { showToast('Failed to delete user.', 'error'); setDeleteConfirm(null); return; }
+    }
     setUsers(prev => prev.filter(x => x.id !== u.id));
     setDeleteConfirm(null);
     showToast('User deleted.', 'error');
@@ -254,6 +283,15 @@ export default function UsersPage() {
                   onChange={e => setFormData(f => ({ ...f, email: e.target.value }))} placeholder="email@nexus.com" />
               </div>
             </div>
+
+            {!editingUser && (
+              <div className="form-group">
+                <label className="form-label">Password *</label>
+                <input className="form-input" type="password" value={formData.password}
+                  onChange={e => setFormData(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Min. 6 characters" />
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">

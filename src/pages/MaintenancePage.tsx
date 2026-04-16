@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import type { MaintenanceLog, MaintenanceType, MaintenanceStatus } from '../types';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 interface MaintenanceFormData {
   productId: string;
@@ -92,7 +95,7 @@ export default function MaintenancePage() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.productId || !formData.description || !formData.scheduledDate || !formData.technician) {
       showToast('Product, description, date and technician are required.', 'error');
       return;
@@ -100,6 +103,23 @@ export default function MaintenancePage() {
     const product = products.find(p => p.id === formData.productId);
     const store = stores.find(s => s.id === product?.storeId);
     if (editingLog) {
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('maintenance_logs').update({
+          product_id: formData.productId,
+          product_name: product?.name || editingLog.productName,
+          sku: product?.sku || editingLog.sku,
+          store_id: product?.storeId || editingLog.storeId,
+          store_name: store?.name || editingLog.storeName,
+          type: formData.type, description: formData.description,
+          status: formData.status,
+          cost: formData.cost ? Number(formData.cost) : null,
+          scheduled_date: formData.scheduledDate,
+          completed_date: formData.completedDate || null,
+          technician: formData.technician,
+          notes: formData.notes || null,
+        }).eq('id', editingLog.id);
+        if (error) { showToast('Failed to update maintenance log.', 'error'); return; }
+      }
       setMaintenanceLogs(prev => prev.map(l => l.id === editingLog.id ? {
         ...l, ...formData,
         cost: formData.cost ? Number(formData.cost) : undefined,
@@ -130,6 +150,17 @@ export default function MaintenancePage() {
         createdAt: new Date().toISOString().slice(0, 10),
         notes: formData.notes || undefined,
       };
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('maintenance_logs').insert({
+          id: newLog.id, product_id: newLog.productId, product_name: newLog.productName,
+          sku: newLog.sku, store_id: newLog.storeId, store_name: newLog.storeName,
+          type: newLog.type, description: newLog.description, status: newLog.status,
+          cost: newLog.cost ?? null, scheduled_date: newLog.scheduledDate,
+          completed_date: newLog.completedDate || null, technician: newLog.technician,
+          created_by: newLog.createdBy, created_at: newLog.createdAt, notes: newLog.notes || null,
+        });
+        if (error) { showToast('Failed to create maintenance log: ' + error.message, 'error'); return; }
+      }
       setMaintenanceLogs(prev => [newLog, ...prev]);
       addAuditLog({ action: 'create', module: 'product', entityId: newLog.id, entityName: newLog.productName, details: `Maintenance log created for "${newLog.productName}".` });
       showToast('Maintenance log created!');
@@ -137,7 +168,11 @@ export default function MaintenancePage() {
     setShowModal(false);
   };
 
-  const handleDelete = (l: MaintenanceLog) => {
+  const handleDelete = async (l: MaintenanceLog) => {
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('maintenance_logs').delete().eq('id', l.id);
+      if (error) { showToast('Failed to delete maintenance log.', 'error'); setDeleteConfirm(null); return; }
+    }
     setMaintenanceLogs(prev => prev.filter(x => x.id !== l.id));
     addAuditLog({ action: 'delete', module: 'product', entityId: l.id, entityName: l.productName, details: `Maintenance log deleted for "${l.productName}".` });
     setDeleteConfirm(null);

@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import type { PurchaseOrder } from '../types';
 import Layout from '../components/Layout';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -113,9 +116,12 @@ export default function VendorIntelligencePage() {
     setEditNotes(sup.notes ?? '');
   }
 
-  function saveSupRating() {
+  async function saveSupRating() {
     if (!editingSupId) return;
     const combined = Math.round((editDelivery + editQuality) / 2) as 1 | 2 | 3 | 4 | 5;
+    if (SUPABASE_ON) {
+      await supabase.from('suppliers').update({ rating: combined, notes: editNotes || null }).eq('id', editingSupId);
+    }
     setSuppliers(prev => prev.map(s =>
       s.id === editingSupId ? { ...s, rating: combined, notes: editNotes } : s
     ));
@@ -132,7 +138,7 @@ export default function VendorIntelligencePage() {
     setRecvQtys(qtys);
   }
 
-  function submitReceiving() {
+  async function submitReceiving() {
     if (!activeRecvPO) return;
     const updatedItems = activeRecvPO.items.map((item, idx) => {
       const entered = Number(recvQtys[String(idx)] ?? 0);
@@ -142,10 +148,19 @@ export default function VendorIntelligencePage() {
     });
     const allReceived = updatedItems.every(i => (i.receivedQty ?? 0) >= i.quantity);
     const newStatus = allReceived ? 'received' as const : 'partial' as const;
+    const receivedAt = allReceived ? new Date().toISOString() : activeRecvPO.receivedAt;
+
+    if (SUPABASE_ON) {
+      await supabase.from('purchase_orders').update({
+        items: JSON.stringify(updatedItems),
+        status: newStatus,
+        received_at: receivedAt || null,
+      }).eq('id', recvPOId);
+    }
 
     setPurchaseOrders(prev => prev.map(po =>
       po.id === recvPOId
-        ? { ...po, items: updatedItems, status: newStatus, receivedAt: allReceived ? new Date().toISOString() : po.receivedAt }
+        ? { ...po, items: updatedItems, status: newStatus, receivedAt: receivedAt ?? undefined }
         : po
     ));
     showToast(allReceived ? `PO ${activeRecvPO.poNumber} fully received` : `Partial receipt recorded for ${activeRecvPO.poNumber}`);

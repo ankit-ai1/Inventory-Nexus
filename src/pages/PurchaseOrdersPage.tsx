@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import type { PurchaseOrder, POStatus, PurchaseOrderItem } from '../types';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const STATUS_INFO: Record<POStatus, { label: string; cls: string; icon: string }> = {
   pending: { label: 'Pending Review', cls: 'chip-warning', icon: 'hourglass_empty' },
@@ -54,7 +57,7 @@ export default function PurchaseOrdersPage() {
 
   const totalFormValue = formData.items.reduce((s, i) => s + i.quantity * i.price, 0);
 
-  const handleSubmitPO = () => {
+  const handleSubmitPO = async () => {
     if (isAdmin && !formData.storeId) { showToast('Please select a store.', 'error'); return; }
     if (!formData.justification.trim()) { showToast('Please enter a justification.', 'error'); return; }
     if (formData.items.some(i => !i.productName || !i.sku || i.quantity < 1)) {
@@ -74,6 +77,16 @@ export default function PurchaseOrdersPage() {
       requestedAt: new Date().toISOString(),
       totalValue: totalFormValue,
     };
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('purchase_orders').insert({
+        id: po.id, po_number: po.poNumber, status: po.status,
+        store_id: po.storeId, store_name: po.storeName,
+        requested_by: po.requestedBy, requested_by_id: po.requestedById,
+        items: JSON.stringify(po.items), justification: po.justification,
+        requested_at: po.requestedAt, total_value: po.totalValue,
+      });
+      if (error) { showToast('Failed to submit PO: ' + error.message, 'error'); return; }
+    }
     setPurchaseOrders(prev => [po, ...prev]);
     addAuditLog({ action: 'create', module: 'purchase_order', entityId: po.id, entityName: po.poNumber, details: `PO raised for ${formData.items.length} item(s) — ₹${totalFormValue.toLocaleString()}` });
     addNotification({ type: 'purchase_order', title: 'New Purchase Order', message: `${po.poNumber} submitted by ${po.requestedBy}. Awaiting admin review.`, link: '/purchase-orders' });
@@ -82,13 +95,18 @@ export default function PurchaseOrdersPage() {
     setFormData({ justification: '', items: [emptyItem()], storeId: '' });
   };
 
-  const handleReview = () => {
+  const handleReview = async () => {
     if (!reviewPO) return;
     const newStatus: POStatus = reviewAction === 'approve' ? 'approved' : 'rejected';
+    const now = new Date().toISOString();
+    if (SUPABASE_ON) {
+      await supabase.from('purchase_orders').update({
+        status: newStatus, reviewed_by: currentUser?.name,
+        review_comment: reviewComment || null, reviewed_at: now,
+      }).eq('id', reviewPO.id);
+    }
     setPurchaseOrders(prev => prev.map(p => p.id === reviewPO.id ? {
-      ...p, status: newStatus,
-      reviewedBy: currentUser?.name, reviewComment,
-      reviewedAt: new Date().toISOString(),
+      ...p, status: newStatus, reviewedBy: currentUser?.name, reviewComment, reviewedAt: now,
     } : p));
     addAuditLog({ action: reviewAction, module: 'purchase_order', entityId: reviewPO.id, entityName: reviewPO.poNumber, details: reviewComment || `PO ${reviewAction}d by admin` });
     addNotification({
@@ -102,12 +120,18 @@ export default function PurchaseOrdersPage() {
     setReviewComment('');
   };
 
-  const handleReceive = (po: PurchaseOrder) => {
+  const handleReceive = async (po: PurchaseOrder) => {
+    const now = new Date().toISOString();
+    if (SUPABASE_ON) {
+      await supabase.from('purchase_orders').update({
+        status: 'received', received_at: now,
+      }).eq('id', po.id);
+    }
     setPurchaseOrders(prev => prev.map(p => p.id === po.id ? {
-      ...p, status: 'received' as POStatus, receivedAt: new Date().toISOString(),
+      ...p, status: 'received' as POStatus, receivedAt: now,
     } : p));
     addAuditLog({ action: 'receive', module: 'purchase_order', entityId: po.id, entityName: po.poNumber, details: 'Stock received and inventory updated' });
-    showToast('Stock marked as received! Inventory updated.');
+    showToast('Stock marked as received!');
   };
 
   const fmtDate = (ts: string) => new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });

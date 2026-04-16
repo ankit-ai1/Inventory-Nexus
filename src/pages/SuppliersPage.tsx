@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
 import type { Supplier } from '../types';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 interface SupplierFormData {
   name: string;
@@ -73,43 +76,69 @@ export default function SuppliersPage() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.contactPerson || !formData.email) {
       showToast('Name, contact person, and email are required.', 'error');
       return;
     }
     const cats = formData.categories.split(',').map(c => c.trim()).filter(Boolean);
     if (editingSupplier) {
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('suppliers').update({
+          name: formData.name, contact_person: formData.contactPerson,
+          email: formData.email, phone: formData.phone, address: formData.address,
+          categories: JSON.stringify(cats), status: formData.status,
+          rating: formData.rating, notes: formData.notes || null,
+        }).eq('id', editingSupplier.id);
+        if (error) { showToast('Failed to update supplier.', 'error'); return; }
+      }
       setSuppliers(prev => prev.map(s => s.id === editingSupplier.id ? {
         ...s, ...formData, categories: cats, notes: formData.notes || undefined,
       } : s));
       addAuditLog({ action: 'update', module: 'store', entityId: editingSupplier.id, entityName: formData.name, details: `Supplier "${formData.name}" updated.` });
       showToast('Supplier updated successfully!');
     } else {
+      const newId = 'sup' + Date.now();
+      const now = new Date().toISOString().slice(0, 10);
+      if (SUPABASE_ON) {
+        const { error } = await supabase.from('suppliers').insert({
+          id: newId, name: formData.name, contact_person: formData.contactPerson,
+          email: formData.email, phone: formData.phone, address: formData.address,
+          categories: JSON.stringify(cats), status: formData.status,
+          rating: formData.rating, total_orders: 0, created_at: now,
+          notes: formData.notes || null,
+        });
+        if (error) { showToast('Failed to add supplier: ' + error.message, 'error'); return; }
+      }
       const newSupplier: Supplier = {
-        id: 'sup' + Date.now(),
-        name: formData.name, contactPerson: formData.contactPerson,
+        id: newId, name: formData.name, contactPerson: formData.contactPerson,
         email: formData.email, phone: formData.phone, address: formData.address,
         categories: cats, status: formData.status, rating: formData.rating,
-        totalOrders: 0, createdAt: new Date().toISOString().slice(0, 10),
-        notes: formData.notes || undefined,
+        totalOrders: 0, createdAt: now, notes: formData.notes || undefined,
       };
       setSuppliers(prev => [newSupplier, ...prev]);
-      addAuditLog({ action: 'create', module: 'store', entityId: newSupplier.id, entityName: newSupplier.name, details: `New supplier "${newSupplier.name}" added.` });
+      addAuditLog({ action: 'create', module: 'store', entityId: newId, entityName: formData.name, details: `New supplier "${formData.name}" added.` });
       showToast('Supplier added successfully!');
     }
     setShowModal(false);
   };
 
-  const handleDelete = (s: Supplier) => {
+  const handleDelete = async (s: Supplier) => {
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('suppliers').delete().eq('id', s.id);
+      if (error) { showToast('Failed to delete supplier.', 'error'); setDeleteConfirm(null); return; }
+    }
     setSuppliers(prev => prev.filter(x => x.id !== s.id));
     addAuditLog({ action: 'delete', module: 'store', entityId: s.id, entityName: s.name, details: `Supplier "${s.name}" deleted.` });
     setDeleteConfirm(null);
     showToast('Supplier removed.', 'error');
   };
 
-  const handleToggleStatus = (s: Supplier) => {
+  const handleToggleStatus = async (s: Supplier) => {
     const newStatus = s.status === 'active' ? 'inactive' : 'active';
+    if (SUPABASE_ON) {
+      await supabase.from('suppliers').update({ status: newStatus }).eq('id', s.id);
+    }
     setSuppliers(prev => prev.map(x => x.id === s.id ? { ...x, status: newStatus } : x));
     showToast(`Supplier ${newStatus === 'active' ? 'activated' : 'deactivated'}.`);
   };

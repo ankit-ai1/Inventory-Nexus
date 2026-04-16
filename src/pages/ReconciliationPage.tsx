@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import type { CycleCount, CycleCountItem, StockAdjustment, AdjustmentReason } from '../types';
 import Layout from '../components/Layout';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -109,7 +112,7 @@ export default function ReconciliationPage() {
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
-  function handleCreateCC() {
+  async function handleCreateCC() {
     if (!newCCStore) { showToast('Please select a store', 'error'); return; }
     if (newCCType === 'category' && !newCCCat) { showToast('Please select a category', 'error'); return; }
     if (newCCType === 'spot' && newCCSpotProds.length === 0) { showToast('Select at least one product for spot check', 'error'); return; }
@@ -129,19 +132,31 @@ export default function ReconciliationPage() {
     const id = 'cc' + Date.now();
     const num = (cycleCounts.length + 1).toString().padStart(3, '0');
     const categoryLabel = newCCType === 'full' ? 'All' : newCCType === 'spot' ? 'Spot Check' : newCCCat;
+    const items = storeProds.map(p => ({
+      productId: p.id, productName: p.name, sku: p.sku, category: p.category,
+      systemQty: p.quantity, countedQty: null, variance: 0,
+    }));
 
     const newCC: CycleCount = {
       id, ccNumber: `CC-2026-${num}`,
       storeId: newCCStore, storeName, category: categoryLabel,
       status: 'draft',
-      items: storeProds.map(p => ({
-        productId: p.id, productName: p.name, sku: p.sku, category: p.category,
-        systemQty: p.quantity, countedQty: null, variance: 0,
-      })),
+      items,
       createdBy: newCCAssignee || currentUser!.name, createdById: currentUser!.id,
       createdAt: newCCDate ? new Date(newCCDate).toISOString() : new Date().toISOString(),
       notes: newCCNotes || undefined,
     };
+
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('cycle_counts').insert({
+        id: newCC.id, cc_number: newCC.ccNumber, store_id: newCC.storeId, store_name: newCC.storeName,
+        category: newCC.category, status: newCC.status, items: JSON.stringify(newCC.items),
+        created_by: newCC.createdBy, created_by_id: newCC.createdById,
+        created_at: newCC.createdAt, notes: newCC.notes || null,
+      });
+      if (error) { showToast('Failed to create cycle count: ' + error.message, 'error'); return; }
+    }
+
     setCycleCounts(prev => [newCC, ...prev]);
     showToast(`Cycle count ${newCC.ccNumber} created`);
     setShowNewCCModal(false);
@@ -162,8 +177,9 @@ export default function ReconciliationPage() {
     setShowCountModal(true);
   }
 
-  function saveCountDraft() {
+  async function saveCountDraft() {
     if (!activeCC) return;
+    let updatedCC: CycleCount | null = null;
     setCycleCounts(prev => prev.map(cc => {
       if (cc.id !== activeCCId) return cc;
       const updatedItems: CycleCountItem[] = cc.items.map(item => {
@@ -172,28 +188,37 @@ export default function ReconciliationPage() {
         return { ...item, countedQty: counted, variance: counted !== null ? counted - item.systemQty : 0 };
       });
       const allCounted = updatedItems.every(i => i.countedQty !== null);
-      return {
-        ...cc,
-        items: updatedItems,
-        status: allCounted ? 'in_progress' : cc.status === 'draft' ? 'in_progress' : cc.status,
-      };
+      const newStatus = allCounted ? 'in_progress' : cc.status === 'draft' ? 'in_progress' : cc.status;
+      const updated = { ...cc, items: updatedItems, status: newStatus as 'draft' | 'in_progress' | 'completed' };
+      updatedCC = updated;
+      return updated;
     }));
+    if (SUPABASE_ON && updatedCC) {
+      await supabase.from('cycle_counts').update({
+        items: JSON.stringify((updatedCC as CycleCount).items),
+        status: (updatedCC as CycleCount).status,
+      }).eq('id', activeCCId);
+    }
     showToast('Counts saved');
     setShowCountModal(false);
   }
 
-  function completeCC(ccId: string) {
+  async function completeCC(ccId: string) {
     const cc = cycleCounts.find(c => c.id === ccId);
     if (!cc) return;
     const allCounted = cc.items.every(i => i.countedQty !== null);
     if (!allCounted) { showToast('Count all items before completing', 'error'); return; }
+    const completedAt = new Date().toISOString();
+    if (SUPABASE_ON) {
+      await supabase.from('cycle_counts').update({ status: 'completed', completed_at: completedAt }).eq('id', ccId);
+    }
     setCycleCounts(prev => prev.map(c =>
-      c.id === ccId ? { ...c, status: 'completed', completedAt: new Date().toISOString() } : c
+      c.id === ccId ? { ...c, status: 'completed', completedAt } : c
     ));
     showToast(`${cc.ccNumber} marked complete`);
   }
 
-  function handleCreateAdj() {
+  async function handleCreateAdj() {
     if (!adjProdId || !adjQty || !adjStore) { showToast('Fill all required fields', 'error'); return; }
     const prod = products.find(p => p.id === adjProdId);
     if (!prod) return;
@@ -213,6 +238,18 @@ export default function ReconciliationPage() {
       requestedBy: currentUser!.name, requestedById: currentUser!.id,
       requestedAt: new Date().toISOString(),
     };
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('stock_adjustments').insert({
+        id: newAdj.id, adj_number: newAdj.adjNumber,
+        product_id: newAdj.productId, product_name: newAdj.productName, sku: newAdj.sku,
+        store_id: newAdj.storeId, store_name: newAdj.storeName,
+        reason: newAdj.reason, system_qty: newAdj.systemQty, adjusted_qty: newAdj.adjustedQty,
+        variance: newAdj.variance, status: newAdj.status, notes: newAdj.notes || null,
+        requested_by: newAdj.requestedBy, requested_by_id: newAdj.requestedById,
+        requested_at: newAdj.requestedAt,
+      });
+      if (error) { showToast('Failed to submit adjustment: ' + error.message, 'error'); return; }
+    }
     setStockAdjustments(prev => [newAdj, ...prev]);
     showToast(`Adjustment ${newAdj.adjNumber} submitted for approval`);
     setShowAdjModal(false);
@@ -220,10 +257,16 @@ export default function ReconciliationPage() {
     setAdjReason('counting_error');
   }
 
-  function reviewAdj(adjId: string, decision: 'approved' | 'rejected') {
+  async function reviewAdj(adjId: string, decision: 'approved' | 'rejected') {
+    const reviewedAt = new Date().toISOString();
+    if (SUPABASE_ON) {
+      await supabase.from('stock_adjustments').update({
+        status: decision, reviewed_by: currentUser!.name, reviewed_at: reviewedAt,
+      }).eq('id', adjId);
+    }
     setStockAdjustments(prev => prev.map(a =>
       a.id === adjId
-        ? { ...a, status: decision, reviewedBy: currentUser!.name, reviewedAt: new Date().toISOString() }
+        ? { ...a, status: decision, reviewedBy: currentUser!.name, reviewedAt }
         : a
     ));
     showToast(`Adjustment ${decision}`);

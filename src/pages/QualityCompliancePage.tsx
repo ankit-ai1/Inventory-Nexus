@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import TopBar from '../components/TopBar';
+
+const SUPABASE_ON = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 import type {
   RMA, RMAStatus, RMAPriority, RMADefectType, RMAResolution,
   AMCContract, AMCCoverage, ServiceFrequency,
@@ -210,7 +213,7 @@ export default function QualityCompliancePage() {
   const docProductsCovered = new Set(visibleDocs.map(d => d.productId)).size;
 
   // ── RMA Handlers ──
-  const handleCreateRMA = () => {
+  const handleCreateRMA = async () => {
     if (!rmaForm.productId || !rmaForm.defectDescription || !rmaForm.vendorName) {
       showToast('Product, defect description and vendor name are required.', 'error');
       return;
@@ -223,67 +226,91 @@ export default function QualityCompliancePage() {
       rmaNumber: 'RMA-' + new Date().getFullYear() + '-' + String(rmas.length + 1).padStart(3, '0'),
       status: 'initiated',
       priority: rmaForm.priority,
-      productId: product.id,
-      productName: product.name,
-      sku: product.sku,
-      storeId: product.storeId,
-      storeName: store?.name || product.storeName,
+      productId: product.id, productName: product.name, sku: product.sku,
+      storeId: product.storeId, storeName: store?.name || product.storeName,
       quantity: Number(rmaForm.quantity) || 1,
-      defectType: rmaForm.defectType,
-      defectDescription: rmaForm.defectDescription,
-      reportedBy: currentUser?.name || '',
-      reportedById: currentUser?.id || '',
+      defectType: rmaForm.defectType, defectDescription: rmaForm.defectDescription,
+      reportedBy: currentUser?.name || '', reportedById: currentUser?.id || '',
       vendorName: rmaForm.vendorName,
       vendorContact: rmaForm.vendorContact || undefined,
       initiatedAt: new Date().toISOString(),
       notes: rmaForm.notes || undefined,
     };
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('rmas').insert({
+        id: newRMA.id, rma_number: newRMA.rmaNumber, status: newRMA.status, priority: newRMA.priority,
+        product_id: newRMA.productId, product_name: newRMA.productName, sku: newRMA.sku,
+        store_id: newRMA.storeId, store_name: newRMA.storeName, quantity: newRMA.quantity,
+        defect_type: newRMA.defectType, defect_description: newRMA.defectDescription,
+        reported_by: newRMA.reportedBy, reported_by_id: newRMA.reportedById,
+        vendor_name: newRMA.vendorName, vendor_contact: newRMA.vendorContact || null,
+        initiated_at: newRMA.initiatedAt, notes: newRMA.notes || null,
+      });
+      if (error) { showToast('Failed to create RMA: ' + error.message, 'error'); return; }
+    }
     setRmas(prev => [newRMA, ...prev]);
     showToast('Return request ' + newRMA.rmaNumber + ' created successfully!');
     setShowCreateRMA(false);
     setRmaForm(emptyRMAForm);
   };
 
-  const handleAdvanceRMA = (rma: RMA) => {
+  const handleAdvanceRMA = async (rma: RMA) => {
     const next = RMA_NEXT[rma.status];
     if (!next) return;
     const now = new Date().toISOString();
     const update: Partial<RMA> = { status: next };
-    if (next === 'received') update.receivedAt = now;
-    else if (next === 'inspected') update.inspectedAt = now;
-    else if (next === 'sent_to_vendor') update.sentToVendorAt = now;
-    else if (next === 'resolved') update.resolvedAt = now;
+    const dbUpdate: Record<string, string> = { status: next };
+    if (next === 'received') { update.receivedAt = now; dbUpdate.received_at = now; }
+    else if (next === 'inspected') { update.inspectedAt = now; dbUpdate.inspected_at = now; }
+    else if (next === 'sent_to_vendor') { update.sentToVendorAt = now; dbUpdate.sent_to_vendor_at = now; }
+    else if (next === 'resolved') { update.resolvedAt = now; dbUpdate.resolved_at = now; }
+    if (SUPABASE_ON) {
+      await supabase.from('rmas').update(dbUpdate).eq('id', rma.id);
+    }
     setRmas(prev => prev.map(r => r.id === rma.id ? { ...r, ...update } : r));
     showToast('Status updated to ' + RMA_STEP_LABELS[next] + '.');
   };
 
-  const handleRejectRMA = (rma: RMA) => {
+  const handleRejectRMA = async (rma: RMA) => {
+    if (SUPABASE_ON) {
+      await supabase.from('rmas').update({ status: 'rejected' }).eq('id', rma.id);
+    }
     setRmas(prev => prev.map(r => r.id === rma.id ? { ...r, status: 'rejected' } : r));
     showToast('Return request ' + rma.rmaNumber + ' rejected.', 'error');
   };
 
-  const handleResolveRMA = () => {
+  const handleResolveRMA = async () => {
     if (!resolveState) return;
     const { rma, resolution, notes } = resolveState;
+    const resolvedAt = new Date().toISOString();
+    if (SUPABASE_ON) {
+      await supabase.from('rmas').update({
+        status: 'resolved', resolution, resolution_notes: notes || null, resolved_at: resolvedAt,
+      }).eq('id', rma.id);
+    }
     setRmas(prev => prev.map(r => r.id === rma.id ? {
-      ...r, status: 'resolved', resolution, resolutionNotes: notes || undefined,
-      resolvedAt: new Date().toISOString(),
+      ...r, status: 'resolved', resolution, resolutionNotes: notes || undefined, resolvedAt,
     } : r));
     showToast('Return request ' + rma.rmaNumber + ' marked as resolved.');
     setResolveState(null);
   };
 
   // ── AMC Handlers ──
-  const handleLogService = (contract: AMCContract) => {
+  const handleLogService = async (contract: AMCContract) => {
     const todayStr = today();
     const nextService = computeNextServiceDate(todayStr, contract.serviceFrequency);
+    if (SUPABASE_ON) {
+      await supabase.from('amc_contracts').update({
+        last_service_date: todayStr, next_service_date: nextService,
+      }).eq('id', contract.id);
+    }
     setAmcContracts(prev => prev.map(c => c.id === contract.id
       ? { ...c, lastServiceDate: todayStr, nextServiceDate: nextService }
       : c));
     showToast('Service logged for ' + contract.productName + '. Next service: ' + nextService + '.');
   };
 
-  const handleCreateAMC = () => {
+  const handleCreateAMC = async () => {
     if (!amcForm.productId || !amcForm.vendorName || !amcForm.startDate || !amcForm.endDate) {
       showToast('Product, vendor name and dates are required.', 'error');
       return;
@@ -307,6 +334,20 @@ export default function QualityCompliancePage() {
       createdBy: currentUser?.name || '',
       createdAt: new Date().toISOString(),
     };
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('amc_contracts').insert({
+        id: newAMC.id, contract_number: newAMC.contractNumber,
+        product_id: newAMC.productId, product_name: newAMC.productName, sku: newAMC.sku,
+        store_id: newAMC.storeId, store_name: newAMC.storeName,
+        vendor_name: newAMC.vendorName, vendor_contact: newAMC.vendorContact || null,
+        vendor_email: newAMC.vendorEmail || null,
+        start_date: newAMC.startDate, end_date: newAMC.endDate,
+        coverage_type: newAMC.coverageType, service_frequency: newAMC.serviceFrequency,
+        next_service_date: newAMC.nextServiceDate, annual_cost: newAMC.annualCost,
+        notes: newAMC.notes || null, created_by: newAMC.createdBy, created_at: newAMC.createdAt,
+      });
+      if (error) { showToast('Failed to create AMC contract: ' + error.message, 'error'); return; }
+    }
     setAmcContracts(prev => [newAMC, ...prev]);
     showToast('AMC contract ' + newAMC.contractNumber + ' created!');
     setShowCreateAMC(false);
@@ -314,7 +355,7 @@ export default function QualityCompliancePage() {
   };
 
   // ── Vault Handlers ──
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!uploadForm.productId || !uploadForm.title || (!uploadForm.fileName && !selectedFile)) {
       showToast('Product, title and file are required.', 'error');
       return;
@@ -335,6 +376,16 @@ export default function QualityCompliancePage() {
       expiryDate: uploadForm.expiryDate || undefined,
       notes: uploadForm.notes || undefined,
     };
+    if (SUPABASE_ON) {
+      const { error } = await supabase.from('asset_documents').insert({
+        id: newDoc.id, product_id: newDoc.productId, product_name: newDoc.productName, sku: newDoc.sku,
+        store_id: newDoc.storeId, store_name: newDoc.storeName,
+        doc_type: newDoc.docType, title: newDoc.title, file_name: newDoc.fileName, file_size: newDoc.fileSize,
+        uploaded_by: newDoc.uploadedBy, uploaded_by_id: newDoc.uploadedById, uploaded_at: newDoc.uploadedAt,
+        expiry_date: newDoc.expiryDate || null, notes: newDoc.notes || null,
+      });
+      if (error) { showToast('Failed to upload document: ' + error.message, 'error'); return; }
+    }
     setAssetDocs(prev => [newDoc, ...prev]);
     showToast('Document "' + newDoc.title + '" uploaded successfully!');
     setShowUploadModal(false);
@@ -342,7 +393,10 @@ export default function QualityCompliancePage() {
     setSelectedFile(null);
   };
 
-  const handleDeleteDoc = (doc: AssetDocument) => {
+  const handleDeleteDoc = async (doc: AssetDocument) => {
+    if (SUPABASE_ON) {
+      await supabase.from('asset_documents').delete().eq('id', doc.id);
+    }
     setAssetDocs(prev => prev.filter(d => d.id !== doc.id));
     showToast('Document removed.', 'error');
   };

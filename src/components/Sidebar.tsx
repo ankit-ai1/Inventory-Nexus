@@ -72,8 +72,8 @@ export default function Sidebar() {
     setSidebarOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
     setSidebarOpen(false);
   };

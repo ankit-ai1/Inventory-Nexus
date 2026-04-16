@@ -36,7 +36,16 @@ function AdminRoute({ children }: { children: ReactNode }) {
 }
 
 function AppRoutes() {
-  const { currentUser } = useApp();
+  const { currentUser, dbLoading } = useApp();
+
+  if (dbLoading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', background: 'var(--background)' }}>
+      <div style={{ width: 40, height: 40, border: '3px solid var(--outline-variant)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <p style={{ fontSize: '0.9375rem', color: 'var(--secondary)', fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>Loading…</p>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
   return (
     <Routes>
       <Route path="/login" element={currentUser ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
@@ -66,7 +75,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppRoutes />
         <ToastContainer />
       </BrowserRouter>
